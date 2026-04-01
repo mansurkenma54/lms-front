@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="kk" data-theme="dark" data-font-size="medium">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PyGame.okmpu — Python оқыту платформасы</title>
+  <meta name="description" content="Мектептер мен университеттерге арналған Python оқыту платформасы. ACMP есептер, онлайн компилятор, мұғалім-оқушы жүйесі.">
+  <link rel="stylesheet" href="css/style.css?v=2.0">
+  <style>
+    /* ── Hero ── */
+    .hero-wrap {
+      position: relative; overflow: hidden;
+      padding: 56px 5% 44px;
+    }
+    .hero-wrap::before {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(ellipse 60% 50% at 50% 0%, rgba(139,111,212,.12), transparent);
+      pointer-events: none;
+    }
+    .hero-badge {
+      display: inline-flex; align-items:center; gap:6px;
+      padding: 4px 14px; border-radius: 20px;
+      background: rgba(139,111,212,.08); border: 1px solid rgba(139,111,212,.2);
+      color: var(--primary); font-size: 11px; font-weight: 700;
+      margin-bottom: 16px; letter-spacing: .4px;
+    }
+    .hero-title {
+      font-size: clamp(22px, 4.5vw, 44px);
+      font-weight: 700; line-height: 1.2; margin-bottom: 14px; color: var(--text1);
+    }
+    .hero-title span { color: var(--primary); }
+    .hero-sub {
+      color: var(--text2); font-size: clamp(13px, 1.6vw, 15px);
+      max-width: 500px; margin: 0 auto 24px; line-height: 1.7;
+    }
+    .hero-btns { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+    .header-settings { display:flex; align-items:center; gap:6px; }
+
+    /* ── Stats strip ── */
+    .stats-strip {
+      display:flex; justify-content:center; gap:24px; flex-wrap:wrap;
+      padding: 16px 20px; margin: 0 auto 16px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      max-width: 760px; border-radius: 14px;
+    }
+    .stat-item .val { font-size: 22px; font-weight:700; color:var(--primary); }
+    .stat-item .lbl { color:var(--text3); font-size:11px; }
+
+    /* ── Features ── */
+    .features-strip {
+      display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
+      gap:12px; max-width:1080px; margin:0 auto 32px;
+    }
+    .feat-card { padding:18px; border-radius:14px; }
+    .feat-icon { font-size:24px; margin-bottom:8px; }
+    .feat-title { font-size:13px; font-weight:700; color:var(--primary); margin-bottom:4px; }
+    .feat-desc  { font-size:12px; color:var(--text3); line-height:1.6; }
+
+    /* ── Solve Modal ── */
+    .solve-modal {
+      background: var(--card); border:1px solid var(--border);
+      border-radius:18px; width:98%; max-width:980px;
+      max-height:92vh; overflow:hidden; display:flex; flex-direction:column;
+    }
+    .solve-modal-header {
+      display:flex; justify-content:space-between; align-items:center;
+      padding:12px 18px; border-bottom:1px solid var(--border); flex-shrink:0;
+    }
+    .solve-body { display:grid; grid-template-columns:1fr 1fr; flex:1; overflow:hidden; }
+    @media(max-width:700px){ .solve-body{grid-template-columns:1fr; overflow-y:auto;} }
+    .solve-left-pane  { padding:16px; overflow-y:auto; border-right:1px solid var(--border); }
+    .solve-right-pane { display:flex; flex-direction:column; padding:14px; overflow-y:auto; }
+    .solve-right-pane > * { flex-shrink:0; }
+
+    /* ── Auth ── */
+    .auth-overlay {
+      position:fixed; inset:0; background:rgba(0,0,0,.65); z-index:600;
+      display:flex; align-items:center; justify-content:center; backdrop-filter:blur(8px);
+    }
+    .pending-screen { text-align:center; padding:36px 24px; }
+    .pending-screen .big { font-size:44px; }
+    .pending-screen h2 { margin:12px 0 6px; font-size:18px; }
+    .pending-screen p  { color:var(--text3); font-size:13px; }
+  </style>
+</head>
+<body>
+
+  <!-- ═══════════ NAVBAR ═══════════ -->
+  <nav class="navbar" id="main-nav">
+    <div class="logo"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--primary);margin-right:4px;vertical-align:bottom;"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" x2="20" y1="19" y2="19"></line></svg> <span>PyGame.okmpu</span></div>
+
+    <div class="header-settings">
+      <!-- Theme toggle -->
+      <label class="neu-switch" title="Тақырып өзгерту (Қара/Ақ)">
+        <input type="checkbox" id="theme-toggle-switch">
+        <span class="neu-slider"></span>
+      </label>
+
+      
+      
+        <button id="font-size-up" title="Үлкейту">A+</button>
+      </div>
+
+      
+      
+    </div>
+
+    <div class="nav-links">
+      
+      <a href="acmp.html" class="btn-ghost">📚 ACMP</a>
+      <a href="leaderboard.html" class="btn-ghost">🏆 Рейтинг</a>
+      <a href="battle.html" class="btn-ghost">⚔️ Батл</a>
+      <div id="nav-auth-area">
+        <button class="btn btn-primary" id="nav-login-btn" onclick="openAuth('login')" style="padding: 8px 16px; border-radius: 10px;">Кіру / Тіркелу</button>
+      </div>
+      <div id="nav-user-area" style="display:none;align-items:center;gap:8px">
+        <span class="bits-badge" id="nav-bits">💎 —</span>
+        <a href="#" class="btn-ghost" id="nav-profile-link">👤</a>
+        <button class="btn-ghost" onclick="doLogout()">Шығу</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ═══════════ HERO ═══════════ -->
+  <div class="hero-wrap python-bg" style="display:flex;align-items:center;justify-content:center;gap:32px;text-align:left;flex-wrap:wrap">
+    <div style="flex:1;min-width:300px;max-width:600px">
+      <div class="hero-badge">🚀 Python оқыту платформасы</div>
+      <h1 class="hero-title" style="text-align:left">ACMP есептерін шығару<br><span>платформасы</span></h1>
+      <p class="hero-sub" style="text-align:left;margin-left:0">Тіркелмей-ақ 100+ Python есебін шығарыңыз. Компилятор, курстар, батл режимі — бәрі бір жерде!</p>
+      <div class="hero-btns" style="justify-content:flex-start">
+        <button class="btn btn-primary" onclick="document.getElementById('acmp-section').scrollIntoView({behavior:'smooth'})">📚 Есептерді бастау</button>
+        <a href="battle.html" class="btn btn-secondary">⚔️ Батл режимі</a>
+        <button class="btn btn-secondary" id="profile-btn-hero" onclick="openAuth('login')">👤 Профиль</button>
+      </div>
+    </div>
+    <div style="flex:1;min-width:300px;max-width:500px;text-align:center">
+      <img src="images/lavender_hero.png" alt="PyGame Hero" style="width:100%;max-width:460px;border-radius:24px;box-shadow:0 20px 60px rgba(167, 139, 250, 0.2);transform:perspective(1000px) rotateY(-5deg);transition:transform 0.3s">
+    </div>
+  </div>
+
+  <!-- ═══════════ STATS STRIP ═══════════ -->
+  <div class="section" style="padding-top:10px;padding-bottom:0">
+    <div class="stats-strip">
+      <div class="stat-item"><div class="val" id="stat-students">—</div><div class="lbl">Тіркелген оқушылар</div></div>
+      <div class="stat-item"><div class="val">100</div><div class="lbl">ACMP есептер</div></div>
+      <div class="stat-item"><div class="val" id="stat-subs">—</div><div class="lbl">Жіберулер</div></div>
+      <div class="stat-item"><div class="val" id="stat-courses">—</div><div class="lbl">Курстар</div></div>
+    </div>
+  </div>
+
+  <!-- ═══════════ FEATURES ═══════════ -->
+  <div class="section">
+    <h2 class="section-title">Неліктен <span>PyGame.okmpu</span>?</h2>
+    <div class="features-strip">
+      <div class="card feat-card"><div class="feat-icon">📚</div><div class="feat-title">100+ ACMP есептер</div><div class="feat-desc">Тіркелмей шығаруға болады. Жеңіл, орташа, қиын деңгейлер.</div></div>
+      <div class="card feat-card"><div class="feat-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--primary);margin-right:4px;vertical-align:bottom;"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" x2="20" y1="19" y2="19"></line></svg></div><div class="feat-title">Python компилятор</div><div class="feat-desc">Браузерде жазып, бірден тексеріңіз. Матрица, граф, кез-келген есепке.</div></div>
+      <div class="card feat-card"><div class="feat-icon">⚔️</div><div class="feat-title">1v1 Батл режимі</div><div class="feat-desc">Оқушы мен оқушы арасындағы жарыс. 5 минют, ең жылдам жеңеді.</div></div>
+      <div class="card feat-card"><div class="feat-icon">🛡️</div><div class="feat-title">Антикопи жүйесі</div><div class="feat-desc">Ctrl+C/V тыйым, такб ауысу бақылау, 3 ескерту → бан.</div></div>
+      <div class="card feat-card"><div class="feat-icon">🏆</div><div class="feat-title">Рейтинг + Жетістіктер</div><div class="feat-desc">💎 Алмаз, 🥇 Алтын, 🥈 Күміс кубоктары. Профиль, цитата.</div></div>
+      <div class="card feat-card"><div class="feat-icon">👨‍🏫</div><div class="feat-title">Мұғалім панелі</div><div class="feat-desc">Курс жасау, тапсырма беру, оқушыны қабылдау, нәтижені тексеру.</div></div>
+    </div>
+  </div>
+
+  <!-- ═══════════ ACMP PROBLEMS ═══════════ -->
+  <div class="section" id="acmp-section">
+    <h2 class="section-title">📚 Тегін Python <span>Есептер</span></h2>
+    <p style="text-align:center;color:var(--text3);margin-bottom:20px;font-size:13px">
+      Тіркелмей-ақ есеп шығарыңыз. Балл жинау үшін кіріңіз.
+    </p>
+    <div class="filter-btns" id="filter-btns" style="margin-bottom:16px">
+      <button class="filter-btn btn btn-brume active" data-filter="all">Барлығы</button>
+      <button class="filter-btn btn btn-menthe" data-filter="easy">🟢 Жеңіл</button>
+      <button class="filter-btn btn btn-limonade" data-filter="medium">🟡 Орташа</button>
+      <button class="filter-btn btn btn-danger" data-filter="hard">🔴 Қиын</button>
+    </div>
+    <div class="problems-grid" id="problems-grid"></div>
+  </div>
+
+  <!-- ═══════════ FOOTER ═══════════ -->
+  <footer class="site-footer">
+    <div class="footer-links">
+      <a href="leaderboard.html">🏆 Рейтинг</a>
+      <a href="battle.html">⚔️ Батл</a>
+      <a href="student-dashboard.html">🎓 Оқушы</a>
+      <a href="teacher-dashboard.html">🧑‍🏫 Мұғалім</a>
+    </div>
+    <div><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--primary);margin-right:4px;vertical-align:bottom;"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" x2="20" y1="19" y2="19"></line></svg> PyGame.okmpu — Python оқыту платформасы &nbsp;|&nbsp; © 2026</div>
+    <div style="margin-top:6px">Байланыс: kenmamansur@gmail.com</div>
+  </footer>
+
+  <!-- ═══════════ PROBLEM SOLVE MODAL ═══════════ -->
+  <div class="auth-overlay" id="solve-modal-overlay" style="display:none" onclick="if(event.target===this)closeSolveModal()">
+    <div class="solve-modal">
+      <div class="solve-modal-header">
+        <h3 id="sm-title" style="font-size:16px"></h3>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span id="sm-diff"></span>
+          <button class="modal-close" onclick="closeSolveModal()">✕</button>
+        </div>
+      </div>
+      <div class="solve-body">
+        <!-- Left: Problem -->
+        <div class="solve-left-pane" id="sm-left"></div>
+        <!-- Right: Editor -->
+        <div class="solve-right-pane">
+          <div class="autosave-label" id="sm-autosave"></div>
+          <textarea class="code-editor-area" id="sm-code"
+            style="min-height:160px; flex: 1 0 auto;"
+            placeholder="# Python кодыңызды жазыңыз...&#10;n = int(input())&#10;for i in range(n):&#10;    print(i)"
+            spellcheck="false"></textarea>
+
+          <!-- Multi-line INPUT block -->
+          <div class="io-block" style="margin-top:8px">
+            <div class="io-block-label">📥 Кіріс мәліметтер (қолмен тексеру үшін)</div>
+            <textarea id="sm-input" placeholder="Мысалы матрица:&#10;3 3&#10;1 2 3&#10;4 5 6&#10;7 8 9" style="min-height:60px;width:100%;padding:10px 14px;background:transparent;border:none;outline:none;color:var(--text1);font-family:'JetBrains Mono',monospace;font-size:13px;resize:vertical;line-height:1.7"></textarea>
+          </div>
+
+          <div style="display:flex;gap:8px;margin-top:12px;margin-bottom:4px;flex-wrap:wrap">
+            <button class="btn btn-secondary" id="sm-run-free" onclick="runFreeCode()" style="flex:1;min-width:110px">▶ Іске қосу</button>
+            <button class="btn btn-primary" id="sm-run-tests" onclick="runAllTests()" style="flex:1;min-width:110px">🧪 Тексеру</button>
+            <button class="btn btn-secondary" id="sm-submit-btn" onclick="submitSolution()" disabled style="flex:1;min-width:110px">✅ Жіберу</button>
+          </div>
+
+          <!-- OUTPUT block -->
+          <div class="io-block" style="margin-top:10px">
+            <div class="io-block-label">📤 Нәтиже</div>
+            <pre id="sm-output" style="min-height:80px;padding:10px 14px;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--primary);white-space:pre-wrap;overflow-y:auto;max-height:160px"></pre>
+          </div>
+
+          <div id="sm-results" style="margin-top:8px;max-height:180px;overflow-y:auto"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ AUTH MODAL (Unified Login + Register) ═══════════ -->
+  <div class="auth-overlay" id="auth-modal" style="display:none" onclick="if(event.target===this)closeAuth()">
+    <div class="auth-box">
+
+      <!-- Unified Auth Box -->
+      <div id="auth-main">
+        <h2 style="text-align:center;margin-bottom:16px;">Платформаға <span>кіру</span></h2>
+        <div class="auth-tabs" id="auth-tabs-container">
+          <button class="auth-tab active" onclick="switchAuthTab('login')">Кіру</button>
+          <button class="auth-tab" onclick="switchAuthTab('register')">Тіркелу</button>
+        </div>
+
+        <!-- Login tab -->
+        <div id="auth-login-tab">
+          <div class="form-group"><label>Логин</label><input id="u-login" placeholder="Логин енгізіңіз" autocomplete="username"></div>
+          <div class="form-group"><label>Пароль</label><input id="u-pass" type="password" placeholder="••••••" autocomplete="current-password"></div>
+          <button class="btn btn-primary" style="width:100%" id="u-login-btn" onclick="doUnifiedLogin()">Кіру →</button>
+        </div>
+
+        <!-- Register tab (self-register) -->
+        <div id="auth-register-tab" style="display:none">
+          <div class="form-group"><label>Толық аты *</label><input id="r-name" placeholder="Аты Жөні"></div>
+          <div class="form-group"><label>Логин (username) *</label><input id="r-login" placeholder="student_1" autocomplete="username"></div>
+          <div class="form-group"><label>Пароль *</label><input id="r-pass" type="password" placeholder="••••••" autocomplete="new-password"></div>
+          <div class="form-group"><label>Паролді растаңыз *</label><input id="r-pass2" type="password" placeholder="••••••"></div>
+          <button class="btn btn-primary" style="width:100%" id="r-btn" onclick="doSelfRegister()">✅ Тіркелу</button>
+          <p style="color:var(--text3);font-size:11px;margin-top:10px;text-align:center">Тіркелгеннен кейін бірден кіре аласыз</p>
+        </div>
+
+        <p style="text-align:center;margin-top:12px;font-size:12px">
+          <a href="#" onclick="closeAuth()">✕ Жабу</a>
+        </p>
+      </div>
+
+      <!-- Pending screen -->
+      <div id="auth-pending" style="display:none" class="pending-screen">
+        <div class="big">⏳</div>
+        <h2>Аккаунтыңыз тексерілуде</h2>
+        <p>Мұғалім немесе Админ сіздің тіркелуіңізді бекітуін күтіңіз.<br>Бекіткен соң кіре аласыз.</p>
+        <button class="btn btn-secondary" style="margin-top:20px" onclick="closeAuth()">Жабу</button>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Skulpt Python -->
+  <script src="https://skulpt.org/js/skulpt.min.js"></script>
+  <script src="https://skulpt.org/js/skulpt-stdlib.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/bits.js"></script>
+  <script src="js/settings.js"></script>
+  <script src="js/problems.js"></script>
+
+  <script>
+    // ─── Init Settings ─────────────────────────────
+    Settings.init();
+
+    // ─── Toast ─────────────────────────────────────
+    function showToast(msg, type) {
+      var colors = { success:'#00ff88', error:'#ff3c3c', warn:'#ffc800', info:'#7c3aed' };
+      var t = document.createElement('div');
+      t.style.cssText = 'position:fixed;top:20px;right:20px;z-index:99999;background:' +
+        (colors[type]||colors.info) + ';color:#000;padding:12px 20px;border-radius:10px;' +
+        'font-weight:700;font-family:inherit;max-width:340px;animation:slideIn .3s ease;box-shadow:0 4px 20px rgba(0,0,0,.4)';
+      t.textContent = msg;
+      document.body.appendChild(t);
+      setTimeout(function() { t.remove(); }, 3500);
+    }
+
+    // ─── Auth state ────────────────────────────────
+    var currentUser = null;
+    try { currentUser = Auth.getCurrentUser(); } catch(e){}
+
+    function updateNavForUser(user) {
+      if (!user) return;
+      document.getElementById('nav-auth-area').style.display = 'none';
+      var ua = document.getElementById('nav-user-area');
+      ua.style.display = 'flex';
+      document.getElementById('nav-profile-link').textContent = '👤 ' + user.display_name;
+      document.getElementById('profile-btn-hero').textContent = '👤 Профиль';
+      document.getElementById('profile-btn-hero').onclick = function() {
+        if (user.role === 'student') window.location.href = 'student-dashboard.html';
+        else window.location.href = 'teacher-dashboard.html';
+      };
+      // load bits
+      try {
+        BitsSystem.getBalance(user.id).then(function(b) {
+          document.getElementById('nav-bits').textContent = '💎 ' + b;
+        }).catch(function(){});
+      } catch(e) {}
+    }
+
+    if (currentUser && Auth.getToken()) {
+      updateNavForUser(currentUser);
+    }
+
+    async function doLogout() {
+      try { await Auth.logout(); } catch(e){}
+      window.location.reload();
+    }
+
+    // ─── Auth Modal ────────────────────────────────
+    function openAuth(mode) {
+      document.getElementById('auth-modal').style.display = 'flex';
+      document.getElementById('auth-main').style.display  = 'block';
+      document.getElementById('auth-pending').style.display  = 'none';
+      switchAuthTab('login');
+    }
+    function closeAuth() {
+      document.getElementById('auth-modal').style.display = 'none';
+    }
+
+    function switchAuthTab(tab) {
+      document.getElementById('auth-login-tab').style.display    = tab==='login'    ? 'block':'none';
+      document.getElementById('auth-register-tab').style.display = tab==='register' ? 'block':'none';
+      document.querySelectorAll('#auth-tabs-container .auth-tab').forEach(function(b,i){
+        b.classList.toggle('active',(i===0&&tab==='login')||(i===1&&tab==='register'));
+      });
+    }
+
+    async function doUnifiedLogin() {
+      var btn = document.getElementById('u-login-btn');
+      btn.disabled = true; btn.textContent = '⏳...';
+      try {
+        var data = await Auth.login(document.getElementById('u-login').value, document.getElementById('u-pass').value);
+        if (data.user.status === 'pending') {
+          document.getElementById('auth-main').style.display = 'none';
+          document.getElementById('auth-pending').style.display = 'block';
+          btn.disabled = false; btn.textContent = 'Кіру →';
+          return;
+        }
+        var u = data.user;
+        showToast('Сәтті кірдіңіз! Қош келдіңіз, ' + u.display_name, 'success');
+        closeAuth();
+        if (u.role === 'admin') window.location.href = 'admin.html';
+        else if (u.role === 'teacher') window.location.href = 'teacher-dashboard.html';
+        else { updateNavForUser(u); currentUser = u; window.location.href = 'student-dashboard.html'; }
+      } catch(e) { showToast(e.message, 'error'); }
+      btn.disabled = false; btn.textContent = 'Кіру →';
+    }
+
+    async function doSelfRegister() {
+      var name  = document.getElementById('r-name').value.trim();
+      var login = document.getElementById('r-login').value.trim();
+      var pass  = document.getElementById('r-pass').value;
+      var pass2 = document.getElementById('r-pass2').value;
+      if (!name||!login||!pass) { showToast('Барлық өрістерді толтырыңыз', 'warn'); return; }
+      if (pass !== pass2) { showToast('Парольдер сәйкес емес', 'warn'); return; }
+      if (pass.length < 4) { showToast('Пароль кем дегенде 4 таңба', 'warn'); return; }
+      var btn = document.getElementById('r-btn');
+      btn.disabled = true; btn.textContent = '⏳ Жіберілуде...';
+      try {
+        await API.auth.selfRegister({ display_name: name, username: login, password: pass });
+        showToast('Тіркелдіңіз! Жүйеге кіруде...', 'success');
+        document.getElementById('u-login').value = login;
+        document.getElementById('u-pass').value = pass;
+        await doUnifiedLogin();
+      } catch(e) { 
+        showToast(e.message, 'error'); 
+        btn.disabled = false; 
+        btn.textContent = '✅ Тіркелу';
+      }
+    }
+
+    // Enter key support
+    ['u-login','u-pass'].forEach(function(id){ document.getElementById(id).addEventListener('keydown', function(e){ if(e.key==='Enter') doUnifiedLogin(); }); });
+
+    // ─── ACMP Problems ─────────────────────────────
+    var currentProblem = null;
+    var lastTestResults = null;
+
+    function renderProblems(filter) {
+      var grid = document.getElementById('problems-grid');
+      grid.innerHTML = '';
+      var list = window.PROBLEMS || [];
+      if (filter && filter !== 'all') list = list.filter(function(p) { return p.difficulty === filter; });
+      list.forEach(function(p) {
+        var diffClass = p.difficulty==='easy'?'diff-easy':p.difficulty==='medium'?'diff-medium':'diff-hard';
+        var diffText  = p.difficulty==='easy'?'Жеңіл':p.difficulty==='medium'?'Орташа':'Қиын';
+        var card = document.createElement('div');
+        card.className = 'problem-card';
+        card.innerHTML =
+          '<div class="num">#' + p.id + '</div>' +
+          '<div class="title">' + p.title + '</div>' +
+          '<span class="' + diffClass + '">' + diffText + '</span> ' +
+          '<span style="color:var(--text3);font-size:11px">' + p.points + ' бал</span>';
+        card.onclick = function() { openSolveModal(p); };
+        grid.appendChild(card);
+      });
+      if (!list.length) grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--text3);padding:40px">Есептер жоқ</div>';
+    }
+
+    document.getElementById('filter-btns').addEventListener('click', function(e) {
+      if (e.target.classList.contains('filter-btn')) {
+        document.querySelectorAll('.filter-btn').forEach(function(b){ b.classList.remove('active'); });
+        e.target.classList.add('active');
+        renderProblems(e.target.dataset.filter);
+      }
+    });
+
+    renderProblems('all');
+
+    // ─── Solve Modal ────────────────────────────────
+    function openSolveModal(p) {
+      currentProblem = p;
+      lastTestResults = null;
+      document.getElementById('sm-title').textContent = '#' + p.id + ' ' + p.title;
+      var diff = p.difficulty==='easy'?'diff-easy':p.difficulty==='medium'?'diff-medium':'diff-hard';
+      var dt   = p.difficulty==='easy'?'Жеңіл':p.difficulty==='medium'?'Орташа':'Қиын';
+      document.getElementById('sm-diff').innerHTML = '<span class="' + diff + '">' + dt + '</span>';
+
+      var left = '<h3 style="margin-bottom:12px;font-size:16px">' + p.title + '</h3>';
+      left += '<p style="color:var(--text2);line-height:1.8;white-space:pre-wrap">' + (p.statement || '') + '</p>';
+      if (p.input_format)  left += '<h4 style="margin-top:16px;color:var(--primary)">📥 Кіріс форматы:</h4><p style="color:var(--text2);font-size:13px">' + p.input_format + '</p>';
+      if (p.output_format) left += '<h4 style="margin-top:10px;color:var(--primary)">📤 Шығыс форматы:</h4><p style="color:var(--text2);font-size:13px">' + p.output_format + '</p>';
+      if (p.examples && p.examples.length) {
+        left += '<h4 style="margin-top:16px;color:var(--primary)">🧪 Мысалдар:</h4>';
+        p.examples.forEach(function(ex) {
+          left += '<div style="display:flex;gap:8px;margin-top:8px">' +
+            '<pre style="flex:1;background:var(--surface);padding:8px;border-radius:6px;font-size:11px"><b>Кіріс:</b>\n' + ex.input + '</pre>' +
+            '<pre style="flex:1;background:var(--surface);padding:8px;border-radius:6px;font-size:11px"><b>Шығыс:</b>\n' + ex.output + '</pre></div>';
+        });
+      }
+      // Hints (if logged in)
+      left += '<div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">';
+      left += '<h4 style="margin-bottom:8px">💡 Кеңестер</h4>';
+      if (currentUser) {
+        left += '<button class="btn-hint" onclick="buyHint(\'small\',5)">🔍 Кішкене кеңес — 5 💎</button>';
+        left += '<div id="hint-small-content"></div>';
+        left += '<button class="btn-hint" onclick="buyHint(\'big\',15)">💡 Үлкен кеңес — 15 💎</button>';
+        left += '<div id="hint-big-content"></div>';
+      } else {
+        left += '<p style="color:var(--text3);font-size:12px">Кеңес алу үшін жүйеге кіріңіз</p>';
+      }
+      left += '</div>';
+
+      document.getElementById('sm-left').innerHTML = left;
+      document.getElementById('sm-code').value = '';
+      document.getElementById('sm-output').textContent = '';
+      document.getElementById('sm-input').value = '';
+      document.getElementById('sm-results').innerHTML = '';
+      document.getElementById('sm-submit-btn').disabled = true;
+      document.getElementById('solve-modal-overlay').style.display = 'flex';
+    }
+
+    function closeSolveModal() {
+      document.getElementById('solve-modal-overlay').style.display = 'none';
+      currentProblem = null; lastTestResults = null;
+    }
+
+    // Free run with input
+    async function runFreeCode() {
+      var code = document.getElementById('sm-code').value;
+      if (!code.trim()) { showToast('Код жазыңыз', 'warn'); return; }
+      var inputRaw = document.getElementById('sm-input').value;
+      var inputLines = inputRaw.split('\n');
+      document.getElementById('sm-output').textContent = '⏳ Іске қосылуда...';
+      try {
+        var r = await runPython(code, inputLines);
+        document.getElementById('sm-output').textContent = r.error ? '❌ ' + r.error : (r.output || '(бос нәтиже)');
+        document.getElementById('sm-output').style.color = r.error ? 'var(--danger)' : 'var(--primary)';
+      } catch(e) {
+        document.getElementById('sm-output').textContent = '❌ ' + e.message;
+        document.getElementById('sm-output').style.color = 'var(--danger)';
+      }
+    }
+
+    // Test cases run
+    async function runAllTests() {
+      if (!currentProblem) return;
+      var code = document.getElementById('sm-code').value;
+      if (!code.trim()) { showToast('Код жазыңыз', 'warn'); return; }
+      document.getElementById('sm-results').innerHTML = '<div class="loader-spinner" style="margin:16px auto;width:32px;height:32px"></div>';
+      var tests = currentProblem.test_cases || [];
+      if (!tests.length) { showToast('Тест жоқ, Іске қосу батырмасын қолданыңыз', 'info'); return; }
+
+      var results = []; var passed = 0;
+      for (var i = 0; i < tests.length; i++) {
+        var tc = tests[i];
+        var inp = (tc.input || '').split('\n').filter(function(l){ return l.trim(); });
+        var expected = (tc.expected_output || tc.output || '').trim();
+        var r = await runPython(code, inp);
+        var got = (r.output || '').trim();
+        var ok  = !r.error && got === expected;
+        if (ok) passed++;
+        results.push({ n: i+1, ok, input: tc.input||'', expected, got: r.error || got });
+      }
+      lastTestResults = { score: Math.round(passed/tests.length*100), passed, total: tests.length };
+
+      var html = '<table class="data-table" style="font-size:12px">' +
+        '<tr><th>#</th><th>Кіріс</th><th>Күтілген</th><th>Нәтиже</th><th>✓</th></tr>';
+      results.forEach(function(r) {
+        html += '<tr class="test-result-row">' +
+          '<td>' + r.n + '</td>' +
+          '<td style="max-width:90px;overflow:hidden;text-overflow:ellipsis">' + (r.input||'—').split('\n')[0] + '</td>' +
+          '<td>' + r.expected + '</td>' +
+          '<td style="color:' + (r.ok?'var(--primary)':'var(--danger)') + '">' + r.got + '</td>' +
+          '<td class="' + (r.ok?'test-pass':'test-fail') + '">' + (r.ok?'✅':'❌') + '</td></tr>';
+      });
+      html += '</table>';
+      var sc = lastTestResults.score >= 100 ? 'score-100' : lastTestResults.score >= 50 ? 'score-mid' : 'score-low';
+      html += '<div style="text-align:center;margin-top:8px"><span class="score-badge ' + sc + '">' + lastTestResults.passed + '/' + lastTestResults.total + ' — ' + lastTestResults.score + '%</span></div>';
+      document.getElementById('sm-results').innerHTML = html;
+      document.getElementById('sm-submit-btn').disabled = false;
+    }
+
+    // Skulpt Python runner
+    function runPython(code, inputLines) {
+      return new Promise(function(resolve) {
+        var output = ''; var lines = (inputLines||[]).slice();
+        try {
+          Sk.configure({
+            output: function(t){ output += t; },
+            read: function(x){
+              if (Sk.builtinFiles && Sk.builtinFiles.files[x] !== undefined) return Sk.builtinFiles.files[x];
+              throw new Error('Файл табылмады: ' + x);
+            },
+            inputfun: function(){ return Promise.resolve(lines.length ? lines.shift() : ''); },
+            inputfunTakesPromise: true,
+            __future__: Sk.python3,
+            execLimit: 8000
+          });
+          Sk.misceval.asyncToPromise(function(){ return Sk.importMainWithBody('<stdin>', false, code, true); })
+            .then(function(){ resolve({ output: output.trimEnd(), error: null }); })
+            .catch(function(e){ resolve({ output:'', error: String(e).replace('TypeError:','Тип қатесі:').replace('SyntaxError:','Синтаксис қатесі:').replace('NameError:','Аты табылмады:').replace('IndentationError:','Шегіну қатесі:') }); });
+        } catch(e) { resolve({ output:'', error: String(e) }); }
+      });
+    }
+
+    async function submitSolution() {
+      if (!lastTestResults || !currentProblem) return;
+      var btn = document.getElementById('sm-submit-btn');
+      
+      if (!currentUser) {
+        // Guest submission
+        var score = lastTestResults.score;
+        var guestName = localStorage.getItem('lms_guest_name') || '';
+        var inputName = prompt(
+          'Рейтингке ену үшін атыңызды жазыңыз:\n(Балдар жиналып отырады - бір атпен қайта жіберуге болады)\n\nСіздің нәтижеңіз: ' + score + '%',
+          guestName
+        );
+        if (inputName === null) {
+          showToast('Жіберу тоқтатылды', 'warn');
+          return;
+        }
+        if (!inputName.trim()) {
+          showToast('Ат бос болмауы керек', 'warn');
+          return;
+        }
+        guestName = inputName.trim();
+        localStorage.setItem('lms_guest_name', guestName);
+
+        btn.disabled = true; btn.textContent = '⏳...';
+        try {
+          await API.guests.saveScore(guestName, lastTestResults.score);
+          showToast('🎉 Рейтингке сәтті қосылдыңыз! (' + guestName + ')', 'success');
+        } catch(e) { showToast(e.message, 'error'); }
+        btn.disabled = false; btn.textContent = '✅ Жіберу';
+        return;
+      }
+
+      // Logged in user submission
+      btn.disabled = true; btn.textContent = '⏳...';
+      try {
+        await API.submissions.create({
+          assignment_id: null, course_id: null,
+          acmp_problem_id: currentProblem.id,
+          code: document.getElementById('sm-code').value,
+          score: lastTestResults.score,
+          passed_tests: lastTestResults.passed,
+          total_tests: lastTestResults.total
+        });
+        if (lastTestResults.score === 100) {
+          try { await BitsSystem.earn(currentUser.id, 10, 'ACMP #' + currentProblem.id); } catch(e){}
+          showToast('🎉 Тамаша! +10 💎 бит жиналды!', 'success');
+        } else {
+          showToast('Жіберілді! ' + lastTestResults.score + '%', 'success');
+        }
+      } catch(e) { showToast(e.message, 'error'); }
+      btn.disabled = false; btn.textContent = '✅ Жіберу';
+    }
+
+    async function buyHint(type, cost) {
+      if (!currentUser || !currentProblem) return;
+      var ok = await BitsSystem.buyHint(currentUser.id, String(currentProblem.id), type, cost);
+      if (ok) {
+        var hint = type==='small' ? currentProblem.hint_small : currentProblem.hint_big;
+        document.getElementById('hint-' + type + '-content').innerHTML = '<div class="hint-content">' + (hint||'Кеңес жоқ') + '</div>';
+        showToast('Кеңес сатып алынды!', 'success');
+      }
+    }
+
+    // ─── Stats ─────────────────────────────────────
+    (async function() {
+      try {
+        var s = await API.admin.getStats();
+        document.getElementById('stat-students').textContent = s.students || 0;
+        document.getElementById('stat-subs').textContent     = s.submissions || 0;
+        document.getElementById('stat-courses').textContent  = s.courses || 0;
+      } catch(e) {}
+    })();
+
+    // ESC close
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') { closeSolveModal(); closeAuth(); }
+    });
+
+    // Tab code indentation fix
+    document.getElementById('sm-code').addEventListener('keydown', function(e) {
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        var start = this.selectionStart, end = this.selectionEnd;
+        this.value = this.value.substring(0, start) + '    ' + this.value.substring(end);
+        this.selectionStart = this.selectionEnd = start + 4;
+      }
+    });
+  </script>
+</body>
+</html>

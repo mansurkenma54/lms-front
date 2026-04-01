@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>📚 Курс — PyGame.okmpu</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="grid-bg">
+  <nav class="navbar">
+    <div class="logo"><a href="student-dashboard.html" style="color:inherit;text-decoration:none">← <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--primary);margin-right:4px;vertical-align:bottom;"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" x2="20" y1="19" y2="19"></line></svg> <span>PyGame.okmpu</span></a></div>
+    <div class="nav-links">
+      
+      <span class="bits-badge" id="bits-badge">💎 100 бит</span>
+      <button class="btn-ghost" onclick="Auth.logout()">Шығу</button>
+    </div>
+  </nav>
+
+  <div class="section">
+    <div id="course-info" class="card" style="margin-bottom:16px; padding: 20px;"></div>
+
+    <!-- TABS -->
+    <div class="teacher-tabs">
+      <button class="teacher-tab active" id="tab-lessons" onclick="switchTab('lessons')">📚 Сабақтар</button>
+      <button class="teacher-tab" id="tab-chat" onclick="switchTab('chat')">💬 Чат</button>
+    </div>
+
+    <!-- LESSONS TAB -->
+    <div id="pane-lessons">
+      <div id="lessons-list"></div>
+      <div id="no-assignments" style="display:none;text-align:center;padding:40px;color:var(--text3)">
+        <p style="font-size:48px;margin-bottom:12px">📭</p>
+        <p>Бұл курста әзірге сабақтар жоқ</p>
+      </div>
+    </div>
+
+    <!-- CHAT TAB -->
+    <div id="pane-chat" style="display:none">
+      <h2 style="font-size:18px;margin-bottom:12px">💬 <span style="color:var(--primary)">Курс чаты</span></h2>
+      <div id="chat-messages">
+      </div>
+      <div class="chat-input-row">
+        <input type="text" id="chat-input" class="form-input" placeholder="Хабарлама жазыңыз..." onkeydown="if(event.key==='Enter')sendChat()">
+        <button class="btn btn-primary" onclick="sendChat()">Жіберу</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/bits.js"></script>
+  <script>
+    function showToast(msg,type){type=type||'info';var colors={success:'#00ff88',error:'#ff3c3c',warn:'#ffc800',info:'#7c3aed'};var t=document.createElement('div');t.style.cssText='position:fixed;top:20px;right:20px;z-index:99999;background:'+(colors[type]||colors.info)+';color:#000;padding:12px 20px;border-radius:10px;font-weight:700;font-family:JetBrains Mono,monospace;max-width:340px;animation:slideIn .3s ease;box-shadow:0 4px 20px rgba(0,0,0,.4)';t.textContent=msg;document.body.appendChild(t);setTimeout(function(){t.remove()},3500)}
+
+    if (!Auth.requireStudent()) {}
+    var user = Auth.getCurrentUser();
+    var courseId = new URLSearchParams(location.search).get('courseId');
+    if (!courseId) { window.location.href='student-dashboard.html'; }
+
+    Auth.updateNavbar && Auth.updateNavbar();
+    loadCourse();
+
+    function switchTab(tabId) {
+      document.getElementById('pane-lessons').style.display = 'none';
+      document.getElementById('pane-chat').style.display = 'none';
+      document.getElementById('tab-lessons').classList.remove('active');
+      document.getElementById('tab-chat').classList.remove('active');
+      
+      document.getElementById('pane-'+tabId).style.display = 'block';
+      document.getElementById('tab-'+tabId).classList.add('active');
+      
+      if(tabId==='chat') loadChat();
+    }
+
+    async function loadCourse() {
+      try {
+        var course = await API.courses.getOne(courseId);
+        document.getElementById('course-info').innerHTML='<div style="display:flex;align-items:center;gap:14px"><div style="font-size:32px">'+(course.emoji||'📚')+'</div><div><h1 style="font-size:20px;margin-bottom:2px">'+course.title+'</h1><p style="color:var(--text3);font-size:12px">🧑‍🏫 '+course.teacher_name+(course.subject?' · '+course.subject:'')+'</p></div></div>'+(course.description?'<p style="color:var(--text2);margin-top:10px;font-size:13px">'+course.description+'</p>':'')+(course.schedule_info?'<p style="color:var(--primary);margin-top:8px;font-size:11px;display:inline-block;padding:4px 8px;background:var(--surface);border-radius:4px">📅 '+course.schedule_info+'</p>':'');
+
+        var lessons = await API.lessons.getByCourse(courseId);
+        var assignments = await API.assignments.getByCourse(courseId);
+        var submissions = [];
+        try { submissions = await API.submissions.get({studentId:user.id}); } catch(e){}
+
+        if (lessons.length === 0 && assignments.length === 0) { document.getElementById('no-assignments').style.display='block'; return; }
+
+        var list = document.getElementById('lessons-list');
+        list.innerHTML='';
+        
+        // Helper to render assignment card
+        function renderAssignment(a) {
+          var sub = submissions.filter(function(s){return s.assignment_id===a.id;});
+          var bestScore = 0;
+          sub.forEach(function(s){if(s.score>bestScore)bestScore=s.score;});
+
+          var now = new Date();
+          var dlStr = '';
+          var expired = false;
+          if (a.deadline) {
+            var dl = new Date(a.deadline);
+            if (dl < now) { expired = true; dlStr='<span class="deadline-expired">🔒 Мерзімі өтті</span>'; }
+            else {
+              var diff = dl - now;
+              var days = Math.floor(diff/86400000);
+              var hrs = Math.floor((diff%86400000)/3600000);
+              dlStr='<span class="deadline-timer">⏰ '+days+' күн '+hrs+' сағат</span>';
+            }
+          }
+
+          var status = '', statusClass = '';
+          if (bestScore >= 100) { status='✅ '+bestScore+'%'; statusClass='score-100'; }
+          else if (bestScore > 0) { status='⏳ '+bestScore+'%'; statusClass='score-mid'; }
+          else if (expired) { status='🔒'; statusClass='score-low'; }
+          else { status='⏳ Күтілуде'; statusClass=''; }
+
+          var typeBadge = a.assignment_type==='quiz'?'❓ Тест':a.assignment_type==='code'?'💻 Код':a.assignment_type==='file_upload'?'📎 Файл':'📝 Жауап';
+          
+          return '<div class="card" style="margin-top:8px;display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-radius:14px">' +
+                 '<div><h3 style="font-size:14px;font-weight:700;margin-bottom:2px"><span style="color:var(--primary);margin-right:8px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px">'+typeBadge+'</span>'+a.title+'</h3>'+(dlStr?'<p style="font-size:11px;margin-top:2px">'+dlStr+'</p>':'')+'</div>' +
+                 '<div style="display:flex;align-items:center;gap:12px"><span class="score-badge '+statusClass+'" style="font-size:11px;padding:4px 10px">'+status+'</span>'+(expired&&bestScore===0?'':'<a href="student-assignment.html?assignmentId='+a.id+'&courseId='+courseId+'" class="btn btn-primary" style="padding:8px 16px;font-size:12px;font-weight:700">'+(bestScore>=100?'Қайталау':'Орындау')+'</a>')+'</div></div>';
+        }
+
+        // Render Lessons
+        for (var i=0; i<lessons.length; i++) {
+          var l = lessons[i];
+          var materials = await API.lessons.getMaterials(l.id);
+          var l_assign = assignments.filter(function(a){return a.lesson_id === l.id;});
+          
+          var isLocked = false;
+          var unlockStr = '';
+          if(l.active_date) {
+            var startTs = new Date(l.active_date);
+            if(l.start_time) {
+               var parts = l.start_time.split(':');
+               startTs.setHours(parseInt(parts[0]), parseInt(parts[1]));
+            }
+            if(new Date() < startTs) {
+               isLocked = true;
+               unlockStr = '<span style="color:var(--error);font-size:12px">🔒 '+startTs.toLocaleString('kk-KZ')+' ашылады</span>';
+            }
+          }
+
+          var mHtml = materials.map(function(m){return '<div style="display:inline-flex;align-items:center;background:var(--surface);padding:6px 10px;border-radius:4px;font-size:12px;margin:4px 4px 0 0">🔗 <a href="'+m.url+'" target="_blank" style="color:var(--primary);text-decoration:none">'+(m.title||m.material_type)+'</a></div>'}).join('');
+          var aHtml = isLocked ? '' : l_assign.map(renderAssignment).join('');
+
+          var div = document.createElement('div');
+          div.style.marginBottom = '24px';
+          div.innerHTML = '<h2 style="font-size:18px;color:var(--primary);margin-bottom:8px">📘 '+l.title+'</h2>'+
+                          (l.description?'<p style="font-size:13px;color:var(--text2);margin-bottom:8px">'+l.description+'</p>':'')+
+                          unlockStr + 
+                          (mHtml && !isLocked ? '<div style="margin-bottom:12px">'+mHtml+'</div>' : '') +
+                          aHtml;
+          list.appendChild(div);
+        }
+
+        // Render orphan assignments
+        var orphan = assignments.filter(function(a){return !a.lesson_id;});
+        if(orphan.length>0){
+          var odiv = document.createElement('div');
+          odiv.innerHTML = '<h2 style="font-size:18px;color:var(--text3);margin:24px 0 12px">Сабақсыз тапсырмалар</h2>';
+          odiv.innerHTML += orphan.map(renderAssignment).join('');
+          list.appendChild(odiv);
+        }
+
+      } catch(e) { showToast('Курс жүктелмеді: '+e.message,'error'); }
+    }
+
+    // --- CHAT ---
+    async function loadChat() {
+      var box = document.getElementById('chat-messages');
+      box.innerHTML = '<p style="color:var(--text3);text-align:center">Жүктелуде...</p>';
+      try {
+        var msgs = await API.comments.getByCourse(courseId);
+        box.innerHTML = msgs.length === 0 ? '<p style="color:var(--text3);text-align:center">Хабарлама жоқ</p>' : msgs.map(function(m){
+           var isMe = m.user_id === user.id;
+            var roleColor = m.role==='teacher'?'var(--primary)':'var(--text2)';
+            var bubbleColor = isMe ? 'rgba(167, 139, 250, 0.12)' : 'var(--card)';
+            return '<div style="margin-bottom:12px;text-align:'+(isMe?'right':'left')+'">' +
+                   '<div style="display:inline-block;max-width:85%;padding:12px 18px;border-radius:18px;background:'+bubbleColor+';border:1px solid var(--border);">' +
+                     '<div style="font-size:12px;color:'+roleColor+';margin-bottom:6px;font-weight:700">' + m.display_name + (m.role==='teacher'?' (Мұғалім)':'') + ' <span style="font-weight:400;color:var(--text3);margin-left:6px">' + new Date(m.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + '</span></div>' +
+                     '<div style="font-size:14px;line-height:1.5;color:var(--text1)">' + m.message + '</div>' +
+                   '</div></div>';
+        }).join('');
+        box.scrollTop = box.scrollHeight;
+      } catch(e){showToast(e.message,'error')}
+    }
+
+    async function sendChat() {
+      var input = document.getElementById('chat-input');
+      var val = input.value.trim();
+      if(!val) return;
+      input.value = '';
+      try {
+        await API.comments.create({course_id: courseId, message: val});
+        loadChat();
+      } catch(e){showToast(e.message,'error')}
+    }
+  </script>
+</body>
+</html>

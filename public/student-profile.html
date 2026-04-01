@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="kk" data-theme="dark">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>👤 Профиль — PyGame.okmpu</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .profile-header { display:flex; align-items:flex-start; gap:24px; flex-wrap:wrap; padding:24px; background:var(--card); border:1px solid var(--border); border-radius:24px; margin-bottom:24px; box-shadow: var(--shadow-sm); }
+    .avatar-wrap { position:relative; flex-shrink:0; }
+    .avatar-edit { position:absolute; bottom:2px; right:2px; width:28px; height:28px; background:var(--primary); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:14px; cursor:pointer; color: white; box-shadow: 0 4px 10px rgba(139,111,212,0.3); }
+    .profile-name { font-size:22px; font-weight:800; margin-bottom:4px; letter-spacing: -0.5px; }
+    .profile-user { color:var(--text3); font-size:13px; font-weight: 600; }
+    .profile-quote { font-style:italic; color:var(--text2); font-size:13px; margin-top:14px; border-left:3px solid var(--primary); padding: 2px 0 2px 14px; line-height: 1.5; }
+    .stat-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:12px; margin-bottom:24px; }
+    .stat-card { background:var(--card); border:1px solid var(--border); border-radius:18px; padding:20px; text-align:center; transition: var(--transition); }
+    .stat-card:hover { border-color: var(--primary); transform: translateY(-4px); }
+    .stat-card .val { font-size:28px; font-weight:800; color:var(--primary); }
+    .stat-card .lbl { color:var(--text3); font-size:11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-top:4px; }
+    .trophies-section { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:24px; }
+    .trophy-card { flex:1; min-width:120px; background:var(--card); border:1px solid var(--border); border-radius:20px; padding:20px; text-align:center; transition: var(--transition); }
+    .trophy-card:hover { transform: scale(1.02); }
+    .trophy-card .icon { font-size:40px; margin-bottom: 8px; }
+    .trophy-card .count { font-size:24px; font-weight:800; margin:4px 0; }
+    .trophy-card .name  { font-size:12px; font-weight: 600; color:var(--text3); }
+    .violations-table tr td:first-child { color: var(--danger); font-weight: 700; }
+    .section-head { font-size:20px; font-weight:800; margin:40px 0 16px; letter-spacing: -0.5px; }
+    .section-head span { color:var(--primary); }
+    .award-teacher-btn { background:rgba(167,139,250,.12); border:1px solid rgba(167, 139, 250, .3); color:var(--primary); border-radius:12px; padding:10px 20px; cursor:pointer; font-family:inherit; font-size:14px; font-weight:700; transition:all .2s; }
+    .award-teacher-btn:hover { background:rgba(167, 139, 250, .2); transform: translateY(-2px); }
+  </style>
+</head>
+<body class="grid-bg">
+  <nav class="navbar">
+    <div class="logo"><a href="student-dashboard.html" style="color:inherit;text-decoration:none">← <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--primary);margin-right:4px;vertical-align:bottom;"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" x2="20" y1="19" y2="19"></line></svg> <span>PyGame.okmpu</span></a></div>
+    <div class="nav-links">
+      
+      <span class="bits-badge" id="bits-badge">💎 —</span>
+      <button id="theme-toggle" class="settings-btn" style="font-size:18px;padding:4px 8px">🌙</button>
+      <button class="btn-ghost" onclick="Auth.logout()">Шығу</button>
+    </div>
+  </nav>
+
+  <div class="section" style="max-width:860px;margin:0 auto">
+
+    <!-- ── Profile Card ── -->
+    <div class="profile-header" id="profile-card">
+      <div class="avatar-wrap">
+        <div class="avatar avatar-lg" id="profile-avatar">?</div>
+      </div>
+      <div style="flex:1">
+        <div class="profile-name" id="p-name"></div>
+        <div class="profile-user" id="p-user"></div>
+        <div id="p-quote" class="profile-quote" style="display:none"></div>
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap" id="p-actions"></div>
+        <div id="p-dates" style="color:var(--text3);font-size:11px;margin-top:8px"></div>
+      </div>
+    </div>
+
+    <!-- ── Stats ── -->
+    <div class="stat-grid" id="stat-grid"></div>
+
+    <!-- ── Trophies ── -->
+    <div class="section-head">🏆 Кубоктар мен <span>жетістіктер</span></div>
+    <div class="trophies-section">
+      <div class="trophy-card" style="border-color:rgba(192,192,192,.3)">
+        <div class="icon">🥈</div>
+        <div class="count" id="t-silver" style="color:#c0c0c0">0</div>
+        <div class="name">Күміс кубок</div>
+      </div>
+      <div class="trophy-card" style="border-color:rgba(255,200,0,.3)">
+        <div class="icon">🥇</div>
+        <div class="count" id="t-gold" style="color:#ffc800">0</div>
+        <div class="name">Алтын кубок</div>
+      </div>
+      <div class="trophy-card" style="border-color:rgba(124,58,237,.3)">
+        <div class="icon">💎</div>
+        <div class="count" id="t-diamond" style="color:#c4b5fd">0</div>
+        <div class="name">Алмаз кубок</div>
+      </div>
+    </div>
+
+    <!-- ── Profile editor ── -->
+    <div class="section-head">✍️ Профильді <span>өңдеу</span></div>
+    <div class="card" style="display:flex;flex-direction:column;gap:10px">
+      <div class="form-group" style="margin:0"><label>Аватар URL (сурет сілтемесі)</label><input id="avatar-input" placeholder="https://example.com/image.png"></div>
+      <div class="form-group" style="margin:0">
+        <label>Менің цитатам</label>
+        <textarea id="quote-input" style="width:100%;min-height:60px;resize:none;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text1);font-family:inherit;font-size:13px" placeholder="Өз цитатаңызды енгізіңіз..."></textarea>
+      </div>
+      <button class="btn btn-primary" style="align-self:flex-end" onclick="saveProfile()">💾 Сақтау</button>
+    </div>
+
+    <!-- ── Password Change ── -->
+    <div class="section-head">🔑 Пароль <span>өзгерту</span></div>
+    <div class="card" style="display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end">
+      <div class="form-group" style="margin:0"><label>Ескі пароль</label><input type="password" id="old-pass"></div>
+      <div class="form-group" style="margin:0"><label>Жаңа пароль</label><input type="password" id="new-pass"></div>
+      <button class="btn btn-secondary" onclick="changePassword()">Өзгерту</button>
+    </div>
+
+    <!-- ── Violations ── -->
+    <div class="section-head">⚠️ Ескертулер <span>тарихы</span></div>
+    <div style="overflow-x:auto">
+      <table class="data-table">
+        <thead><tr><th>Ескерту түрі</th><th>Уақыты</th><th>Ұзақтығы</th></tr></thead>
+        <tbody id="violations-body"></tbody>
+      </table>
+    </div>
+
+    <!-- ── Bits History ── -->
+    <div class="section-head">💎 Алмаз <span>тарихы</span></div>
+    <div style="overflow-x:auto">
+      <table class="data-table">
+        <thead><tr><th>Түрі</th><th>Мөлшер</th><th>Себеп</th><th>Уақыт</th></tr></thead>
+        <tbody id="bits-body"></tbody>
+      </table>
+    </div>
+
+    <!-- ── Submissions ── -->
+    <div class="section-head">📝 Жіберілген <span>есептер</span></div>
+    <div style="overflow-x:auto">
+      <table class="data-table">
+        <thead><tr><th>Есеп</th><th>Балл</th><th>Тест</th><th>Уақыт</th></tr></thead>
+        <tbody id="subs-body"></tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/bits.js"></script>
+  <script src="js/settings.js"></script>
+  <script>
+    Settings.init();
+    function showToast(msg,type){var colors={success:'#10B981',error:'#EF4444',warn:'#FFC800',info:'#A78BFA'};var t=document.createElement('div');t.style.cssText='position:fixed;top:20px;right:20px;z-index:99999;background:'+(colors[type]||colors.info)+';color:#FFFFFF;padding:14px 24px;border-radius:14px;font-weight:700;font-family:inherit;max-width:360px;animation:slideIn .4s cubic-bezier(0.16, 1, 0.3, 1);box-shadow:0 10px 30px rgba(0,0,0,0.2)';t.textContent=msg;document.body.appendChild(t);setTimeout(function(){t.remove()},3500);}
+
+    if (!Auth.requireStudent()) {}
+    var user = Auth.getCurrentUser();
+
+    async function loadProfile() {
+      try {
+        var me = await API.auth.me();
+
+        // Avatar
+        if (me.avatar_url) {
+          document.getElementById('profile-avatar').innerHTML = '<img src="'+escHtml(me.avatar_url)+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%">';
+          document.getElementById('avatar-input').value = me.avatar_url;
+        } else {
+          var initials = me.display_name.split(' ').map(function(w){return w[0]||'';}).join('').toUpperCase().slice(0,2);
+          document.getElementById('profile-avatar').textContent = initials;
+        }
+        document.getElementById('p-name').textContent = me.display_name;
+        document.getElementById('p-user').textContent = '@' + me.username + ' · ' + (me.role === 'student' ? '🎓 Студент' : me.role);
+        document.getElementById('p-dates').textContent =
+          '📅 Тіркелген: ' + new Date(me.created_at).toLocaleDateString('kk-KZ') +
+          (me.last_login ? ' · ⌛ Соңғы кіру: ' + new Date(me.last_login).toLocaleString('kk-KZ') : '');
+
+        // Quote
+        var quote = me.quote || localStorage.getItem('quote_' + me.id) || '';
+        if (quote) {
+          document.getElementById('p-quote').style.display = 'block';
+          document.getElementById('p-quote').textContent = '"' + quote + '"';
+        }
+        document.getElementById('quote-input').value = quote;
+
+        // Load submissions
+        var subs = await API.submissions.get({ studentId: me.id });
+        var solved = subs.filter(function(s){ return s.score >= 100; }).length;
+        var totalScore = 0;
+        subs.forEach(function(s){ totalScore += s.score||0; });
+        var avgScore = subs.length > 0 ? Math.round(totalScore/subs.length) : 0;
+
+        // Load bits
+        var bitsData = await API.bits.get(me.id);
+        var earned = 0, spent = 0;
+        (bitsData.history||[]).forEach(function(h){ if(h.transaction_type==='earn') earned+=h.amount; else spent+=h.amount; });
+        document.getElementById('bits-badge').textContent = '💎 ' + me.bits_balance;
+
+        // Stats grid
+        document.getElementById('stat-grid').innerHTML =
+          '<div class="stat-card"><div class="val">' + solved + '</div><div class="lbl">Шешілген есептер</div></div>' +
+          '<div class="stat-card"><div class="val">' + subs.length + '</div><div class="lbl">Жалпы жіберу</div></div>' +
+          '<div class="stat-card"><div class="val">' + avgScore + '%</div><div class="lbl">Орташа балл</div></div>' +
+          '<div class="stat-card"><div class="val" style="color:#c4b5fd">' + me.bits_balance + '</div><div class="lbl">💎 Алмаз</div></div>' +
+          '<div class="stat-card"><div class="val" style="color:' + (me.warnings_count>0?'#ffc800':'var(--primary)') + '">' + me.warnings_count + '/3</div><div class="lbl">⚠️ Ескертулер</div></div>' +
+          '<div class="stat-card"><div class="val" style="color:' + (me.banned?'#ff3c3c':'#22c55e') + '">' + (me.banned?'🚫 БАН':'✅ Белсенді') + '</div><div class="lbl">Статус</div></div>';
+
+        // Trophies from localStorage (awarded by teacher and stored)
+        var trophies = JSON.parse(localStorage.getItem('trophies_' + me.id) || '{"silver":0,"gold":0,"diamond":0}');
+        document.getElementById('t-silver').textContent  = trophies.silver  || 0;
+        document.getElementById('t-gold').textContent    = trophies.gold    || 0;
+        document.getElementById('t-diamond').textContent = trophies.diamond || 0;
+
+        // Profile action (award button for teacher viewing)
+        document.getElementById('p-actions').innerHTML = '';
+
+        // Violations
+        var violations = await API.violations.get(me.id);
+        var vBody = document.getElementById('violations-body');
+        vBody.innerHTML = '';
+        if (!violations.length) {
+          vBody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--text3)">Ескерту жоқ</td></tr>';
+        } else {
+          violations.forEach(function(v) {
+            var ts = new Date(v.created_at);
+            vBody.innerHTML += '<tr>' +
+              '<td>⚠️ ' + v.violation_type + '</td>' +
+              '<td style="color:var(--text3);font-size:11px">' + ts.toLocaleString('kk-KZ') + '</td>' +
+              '<td style="color:var(--text3);font-size:11px">' + ts.toLocaleTimeString() + '</td>' +
+              '</tr>';
+          });
+        }
+
+        // Bits history
+        var bBody = document.getElementById('bits-body');
+        bBody.innerHTML = '';
+        if (!(bitsData.history||[]).length) {
+          bBody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text3)">Тарих бос</td></tr>';
+        } else {
+          (bitsData.history||[]).forEach(function(h) {
+            var earn = h.transaction_type === 'earn';
+            bBody.innerHTML += '<tr>' +
+              '<td>' + (earn ? '<span style="color:var(--primary);font-weight:700">⬆ Алынды</span>' : '<span style="color:var(--danger);font-weight:700">⬇ Жұмсалды</span>') + '</td>' +
+              '<td style="font-weight:800;color:' + (earn?'var(--primary)':'var(--danger)') + '">' + (earn?'+':'-') + h.amount + ' 💎</td>' +
+              '<td style="font-size:13px;color:var(--text2);font-weight:600">' + (h.reason||'—') + '</td>' +
+              '<td style="font-size:12px;color:var(--text3)">' + new Date(h.created_at).toLocaleString('kk-KZ') + '</td>' +
+              '</tr>';
+          });
+        }
+
+        // Submissions
+        var sBody = document.getElementById('subs-body');
+        sBody.innerHTML = '';
+        if (!subs.length) {
+          sBody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text3)">Жіберу жоқ</td></tr>';
+        } else {
+          subs.slice(0,30).forEach(function(s) {
+            var scoreColor = s.score>=100?'var(--primary)':s.score>=50?'var(--warning)':'var(--danger)';
+            sBody.innerHTML += '<tr>' +
+              '<td style="font-size:13px;font-weight:700">' + (s.acmp_problem_id ? 'ACMP #'+s.acmp_problem_id : s.assignment_id||'—') + '</td>' +
+              '<td style="color:' + scoreColor + ';font-weight:800;font-size:16px">' + s.score + '%</td>' +
+              '<td style="color:var(--text2);font-size:13px;font-weight:600">' + s.passed_tests + '/' + s.total_tests + '</td>' +
+              '<td style="color:var(--text3);font-size:12px">' + new Date(s.submitted_at).toLocaleString('kk-KZ') + '</td>' +
+              '</tr>';
+          });
+        }
+
+      } catch(e) { showToast(e.message, 'error'); }
+    }
+
+    async function saveProfile() {
+      var q = document.getElementById('quote-input').value.trim();
+      var ava = document.getElementById('avatar-input').value.trim();
+      try {
+        await API.auth.updateProfile({ quote: q, avatar_url: ava });
+        localStorage.setItem('quote_' + user.id, q); // Keep localStorage for backward compatibility if needed
+        
+        if (q) {
+          document.getElementById('p-quote').style.display = 'block';
+          document.getElementById('p-quote').textContent = '"' + q + '"';
+        } else {
+          document.getElementById('p-quote').style.display = 'none';
+        }
+        
+        if (ava) {
+          document.getElementById('profile-avatar').innerHTML = '<img src="'+escHtml(ava)+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%">';
+        } else {
+          var initials = user.display_name.split(' ').map(function(w){return w[0]||'';}).join('').toUpperCase().slice(0,2);
+          document.getElementById('profile-avatar').textContent = initials;
+        }
+        
+        showToast('Профиль сақталды!', 'success');
+      } catch(e) { showToast(e.message, 'error'); }
+    }
+    
+    function escHtml(s) {
+      return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    async function changePassword() {
+      var oldP = document.getElementById('old-pass').value;
+      var newP = document.getElementById('new-pass').value;
+      if (!oldP||!newP){ showToast('Барлық өрістерді толтырыңыз','warn'); return; }
+      try {
+        await API.auth.changePassword({ old_password: oldP, new_password: newP });
+        showToast('Пароль өзгертілді!', 'success');
+        document.getElementById('old-pass').value = '';
+        document.getElementById('new-pass').value = '';
+      } catch(e) { showToast(e.message, 'error'); }
+    }
+
+    loadProfile();
+  </script>
+</body>
+</html>

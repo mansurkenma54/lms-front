@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>🎓 Студент панелі — PyGame.okmpu</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="grid-bg">
+  <!-- Login Section -->
+  <div id="login-section" class="login-container" style="display:none;">
+    <div class="auth-box">
+      <h2 style="font-size: 22px; font-weight: 800; text-align: center; margin-bottom: 24px; letter-spacing: -0.5px;">🎓 Студент <span style="color: var(--primary);">кіруі</span></h2>
+      <div class="form-group"><label style="font-weight: 700; font-size: 13px;">Логин</label><input id="s-login" placeholder="student1" style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text1); font-family: inherit;"></div>
+      <div class="form-group"><label style="font-weight: 700; font-size: 13px;">Пароль</label><input id="s-pass" type="password" placeholder="••••••••" style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text1); font-family: inherit;"></div>
+      <button class="btn btn-primary" style="width:100%; padding: 14px; font-size: 15px; font-weight: 800; margin-top: 8px;" id="login-btn">Кіру →</button>
+      <p style="text-align:center;margin-top:20px;font-size:13px;"><a href="index.html" style="color: var(--text3); font-weight: 600; text-decoration: none;">← Басты бетке</a></p>
+    </div>
+  </div>
+
+  <!-- Dashboard Section -->
+  <div id="dashboard-section" style="display:none">
+    <nav class="navbar">
+      <div class="logo"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--primary);margin-right:4px;vertical-align:bottom;"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" x2="20" y1="19" y2="19"></line></svg> <span>PyGame.okmpu</span></div>
+      <div class="nav-links">
+      
+        <span class="bits-badge" id="bits-badge">💎 100 бит</span>
+        <a href="battle.html" class="btn-ghost">⚔️ Батл</a>
+        <button class="btn-ghost" id="msg-btn" style="position:relative" onclick="openMessages()">🔔 <span class="notification-badge" id="msg-count" style="display:none">0</span></button>
+        <a href="student-profile.html" class="btn-ghost" id="profile-link">👤</a>
+        <button class="btn-ghost" onclick="Auth.logout()">Шығу</button>
+      </div>
+    </nav>
+
+    <div class="section">
+      <!-- Battle Quick Join Banner -->
+      <div id="battle-banner" style="display:none;margin-bottom:24px;background:linear-gradient(135deg,rgba(167,139,250,.15),rgba(142,124,195,.1));border:1px solid rgba(167,139,250,.3);border-radius:20px;padding:20px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;box-shadow: var(--shadow-sm);">
+        <div>
+          <div style="font-size:18px;font-weight:800;color:var(--text1)">⚔️ Батл дайын!</div>
+          <div style="color:var(--text2);font-size:13px;margin-top:4px" id="battle-banner-info"></div>
+        </div>
+        <a href="battle.html" class="btn btn-primary" style="text-decoration:none;font-weight:800;padding:12px 24px">⚔️ Қосылу</a>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <h2 class="section-title" style="margin-bottom:0">📚 Менің <span>курстарым</span></h2>
+        <button class="btn btn-secondary btn-small" onclick="document.getElementById('join-course-modal').style.display='flex'">➕ Кодпен қосылу</button>
+      </div>
+      <div id="courses-grid" class="features-grid"></div>
+      <div id="no-courses" style="display:none;text-align:center;padding:40px;color:var(--text3)">
+        <p style="font-size:48px;margin-bottom:12px">📭</p>
+        <p>Сізде әзірге курс жоқ. Мұғалім сізді курсқа тіркейді.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Messages Modal -->
+  <div class="modal-overlay" id="messages-modal" style="display:none">
+    <div class="modal-box" style="max-width:500px">
+      <div class="modal-header"><h3>🔔 Хабарламалар</h3><button class="modal-close" onclick="document.getElementById('messages-modal').style.display='none'">✕</button></div>
+      <div id="messages-list"></div>
+    </div>
+  </div>
+
+  <!-- Join Course Modal -->
+  <div class="modal-overlay" id="join-course-modal" style="display:none">
+    <div class="modal-box" style="max-width:400px">
+      <div class="modal-header"><h3>➕ Курсқа қосылу</h3><button class="modal-close" onclick="document.getElementById('join-course-modal').style.display='none'">✕</button></div>
+      <div class="form-group"><label>Шақыру коды</label><input id="invite-code-input" placeholder="Мысалы: AB12CD" style="text-transform:uppercase"></div>
+      <button class="btn btn-primary" style="width:100%" onclick="joinCourse()">Қосылу</button>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/bits.js"></script>
+  <script>
+    function showToast(msg,type){type=type||'info';var colors={success:'#00ff88',error:'#ff3c3c',warn:'#ffc800',info:'#7c3aed'};var t=document.createElement('div');t.style.cssText='position:fixed;top:20px;right:20px;z-index:99999;background:'+(colors[type]||colors.info)+';color:#000;padding:12px 20px;border-radius:10px;font-weight:700;font-family:JetBrains Mono,monospace;max-width:340px;animation:slideIn .3s ease;box-shadow:0 4px 20px rgba(0,0,0,.4)';t.textContent=msg;document.body.appendChild(t);setTimeout(function(){t.remove()},3500)}
+
+    var user = Auth.getCurrentUser();
+    if (user && Auth.getToken()) { showDashboard(); } else { document.getElementById('login-section').style.display='block'; }
+
+    document.getElementById('login-btn').addEventListener('click', async function() {
+      var btn = this; btn.disabled=true; btn.textContent='⏳ Жүктелуде...';
+      try {
+        await Auth.login(document.getElementById('s-login').value, document.getElementById('s-pass').value);
+        user = Auth.getCurrentUser();
+        showToast('Сәтті кірдіңіз!','success');
+        showDashboard();
+      } catch(e) { showToast(e.message,'error'); }
+      btn.disabled=false; btn.textContent='Кіру';
+    });
+
+    async function showDashboard() {
+      document.getElementById('login-section').style.display='none';
+      document.getElementById('dashboard-section').style.display='block';
+      document.getElementById('profile-link').textContent='👤 '+user.display_name;
+      Auth.updateNavbar && Auth.updateNavbar();
+      try {
+        var courses = await API.courses.getStudentCourses(user.id);
+        var grid = document.getElementById('courses-grid');
+        grid.innerHTML = '';
+        if (courses.length === 0) {
+          document.getElementById('no-courses').style.display='block';
+          return;
+        } else {
+          document.getElementById('no-courses').style.display='none';
+        }
+        for (var i = 0; i < courses.length; i++) {
+          var c = courses[i];
+          var assignments = [];
+          try { assignments = await API.assignments.getByCourse(c.id); } catch(e){}
+          var submissions = [];
+          try { submissions = await API.submissions.get({studentId:user.id}); } catch(e){}
+          var done = 0;
+          assignments.forEach(function(a) {
+            var s = submissions.find(function(sub) { return sub.assignment_id === a.id && sub.score >= 100; });
+            if (s) done++;
+          });
+          var pct = assignments.length > 0 ? Math.round((done/assignments.length)*100) : 0;
+          var card = document.createElement('div');
+          card.className = 'card';
+          card.style.cursor = 'pointer';
+          card.innerHTML =
+          card.innerHTML =
+            '<h3 style="color:var(--text1);font-size:18px;font-weight:800;margin-bottom:8px">' + c.title + '</h3>' +
+            '<p style="color:var(--text3);font-size:13px;margin-bottom:12px;display:flex;align-items:center;gap:6px"><span style="font-size:16px">🧑‍🏫</span> ' + c.teacher_name + '</p>' +
+            '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">' +
+              '<span style="color:var(--text2);font-size:13px;font-weight:600">' + done + '/' + assignments.length + ' тапсырма</span>' +
+              '<span style="color:var(--primary);font-size:13px;font-weight:800">' + pct + '%</span>' +
+            '</div>' +
+            '<div class="progress-bar" style="height:8px;border-radius:4px;background:var(--border);overflow:hidden;margin-bottom:16px"><div class="progress-fill" style="height:100%;background:var(--primary);width:' + pct + '%"></div></div>' +
+            '<a href="student-course.html?courseId=' + c.id + '" class="btn btn-primary" style="width:100%;font-weight:700">Кіру →</a>';
+          grid.appendChild(card);
+        }
+      } catch(e) { showToast('Курстар жүктелмеді: ' + e.message, 'error'); }
+    }
+
+    async function openMessages() {
+      document.getElementById('messages-modal').style.display='flex';
+      try {
+        var msgs = await API.notifications.getAll();
+        var list = document.getElementById('messages-list');
+        if (msgs.length === 0) { list.innerHTML='<p style="color:var(--text3);text-align:center;padding:20px">Хабарлама жоқ</p>'; return; }
+        list.innerHTML = '';
+        msgs.forEach(function(m) {
+          var div = document.createElement('div');
+          div.className = 'card';
+          div.style.marginBottom = '8px';
+          div.style.borderColor = m.is_read ? 'var(--border)' : 'var(--primary)';
+          div.innerHTML = '<div style="display:flex;justify-content:space-between;margin-bottom:6px"><b style="color:var(--primary);font-size:12px">Хабарлама</b><span style="color:var(--text3);font-size:11px">' + new Date(m.created_at).toLocaleString('kk-KZ') + '</span></div><p style="font-size:13px">' + m.message + '</p>';
+          if (!m.is_read) {
+            API.notifications.markRead(m.id).catch(function(){});
+          }
+          list.appendChild(div);
+        });
+      } catch(e) { showToast(e.message,'error'); }
+    }
+
+    async function joinCourse() {
+      var code = document.getElementById('invite-code-input').value.trim();
+      if (!code) { showToast('Кодты енгізіңіз', 'warn'); return; }
+      try {
+        var res = await API.courses.join(code);
+        showToast(res.message, 'success');
+        document.getElementById('join-course-modal').style.display='none';
+        document.getElementById('invite-code-input').value = '';
+        showDashboard();
+      } catch(e) { showToast(e.message, 'error'); }
+    }
+  </script>
+</body>
+</html>

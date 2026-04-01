@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>🧑‍🏫 Курс басқару — PyGame.okmpu</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="grid-bg">
+  <nav class="navbar">
+    <div class="logo"><a href="teacher-dashboard.html" style="color:inherit;text-decoration:none">← <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--primary);margin-right:4px;vertical-align:bottom;"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" x2="20" y1="19" y2="19"></line></svg> <span>PyGame.okmpu</span></a></div>
+    <div class="nav-links">
+      <button class="btn-ghost" onclick="Auth.logout()">Шығу</button></div>
+  </nav>
+
+  <div class="section">
+    <!-- Course Info -->
+    <div id="course-info" class="card" style="margin-bottom:20px"></div>
+
+    <!-- TABS -->
+    <div class="teacher-tabs" style="display:flex;gap:10px;margin-bottom:20px;border-bottom:1px solid var(--border);padding-bottom:10px">
+      <button class="teacher-tab active" id="tab-lessons" onclick="switchTab('lessons')" style="background:none;border:none;color:var(--text);font-size:16px;cursor:pointer;padding:8px 16px;border-radius:4px">📚 Сабақтар</button>
+      <button class="teacher-tab" id="tab-students" onclick="switchTab('students')" style="background:none;border:none;color:var(--text3);font-size:16px;cursor:pointer;padding:8px 16px;border-radius:4px">👥 Студенттер</button>
+      <button class="teacher-tab" id="tab-chat" onclick="switchTab('chat')" style="background:none;border:none;color:var(--text3);font-size:16px;cursor:pointer;padding:8px 16px;border-radius:4px">💬 Чат</button>
+      <button class="teacher-tab" id="tab-submissions" onclick="switchTab('submissions')" style="background:none;border:none;color:var(--text3);font-size:16px;cursor:pointer;padding:8px 16px;border-radius:4px">📝 Орындалғандар</button>
+    </div>
+
+    <!-- LESSONS TAB -->
+    <div id="pane-lessons">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h2 style="font-size:18px">📚 <span style="color:var(--primary)">Сабақтар мен тапсырмалар</span></h2>
+        <button class="btn btn-primary btn-small" onclick="openLessonModal()">➕ Жаңа сабақ</button>
+      </div>
+      <div id="lessons-list"></div>
+    </div>
+
+    <!-- STUDENTS TAB -->
+    <div id="pane-students" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h2 style="font-size:18px">👨‍🎓 <span style="color:var(--primary)">Студенттер</span></h2>
+        <button class="btn btn-primary btn-small" onclick="openEnrollModal()">➕ Студент қосу</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="data-table">
+          <thead><tr><th>Аты</th><th>💎 Бит</th><th>⚠️</th><th>Тіркелген</th><th>Әрекет</th></tr></thead>
+          <tbody id="students-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- CHAT TAB -->
+    <div id="pane-chat" style="display:none">
+      <div class="card" style="display:flex;flex-direction:column;height:500px">
+        <h2 style="font-size:18px;margin-bottom:12px">💬 <span style="color:var(--primary)">Курс чаты</span></h2>
+        <div id="chat-messages" style="flex:1;overflow-y:auto;border:1px solid var(--border);padding:10px;margin-bottom:10px;background:var(--bg);border-radius:8px;display:flex;flex-direction:column;gap:10px">
+          <!-- messages go here -->
+        </div>
+        <div style="display:flex;gap:10px">
+          <input type="text" id="chat-input" class="form-input" placeholder="Хабарлама жазыңыз..." onkeydown="if(event.key==='Enter')sendChat()">
+          <button class="btn btn-primary" onclick="sendChat()">Жіберу</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SUBMISSIONS TAB -->
+    <div id="pane-submissions" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h2 style="font-size:18px">📝 <span style="color:var(--primary)">Студенттердің жауаптары</span></h2>
+        <button class="btn btn-secondary btn-small" onclick="loadSubmissions()">Жаңарту</button>
+      </div>
+      <div id="submissions-list" style="display:flex;flex-direction:column;gap:12px"></div>
+    </div>
+  </div>
+
+  <!-- Lesson Modal -->
+  <div class="modal-overlay" id="lesson-modal" style="display:none">
+    <div class="modal-box" style="max-width:500px">
+      <div class="modal-header"><h3 id="lm-title">➕ Жаңа сабақ</h3><button class="modal-close" onclick="document.getElementById('lesson-modal').style.display='none'">✕</button></div>
+      <div class="form-group"><label>Сабақ атауы *</label><input id="l-title" placeholder=" Мысалы: 1. Python негіздері"></div>
+      <div class="form-group"><label>Қысқаша сипаттама</label><textarea id="l-desc" rows="2"></textarea></div>
+      <div class="form-group"><label>Сабақ күні</label><input type="date" id="l-date" class="form-input"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+         <div class="form-group"><label>Басталу уақыты</label><input type="time" id="l-start" class="form-input"></div>
+         <div class="form-group"><label>Аяқталу уақыты</label><input type="time" id="l-end" class="form-input"></div>
+      </div>
+      <button class="btn btn-primary" style="width:100%;margin-top:12px" id="save-lesson-btn" onclick="saveLesson()">💾 Сақтау</button>
+    </div>
+  </div>
+
+  <!-- Assignment Modal -->
+  <div class="modal-overlay" id="assignment-modal" style="display:none">
+    <div class="modal-box" style="max-height:90vh;overflow-y:auto">
+      <div class="modal-header"><h3 id="am-title">➕ Жаңа тапсырма</h3><button class="modal-close" onclick="document.getElementById('assignment-modal').style.display='none'">✕</button></div>
+      
+      <div class="form-group"><label>Сабақты таңдаңыз *</label><select id="a-lesson" class="form-input"></select></div>
+      
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="form-group"><label>Тапсырма түрі *</label>
+          <select id="a-type" class="form-input" onchange="toggleType()">
+            <option value="code">Код жазу (Python)</option>
+            <option value="quiz">Тест (Jet Brains стилі)</option>
+            <option value="text_essay">Мәтін (Эссе жазу)</option>
+            <option value="short_answer">Қысқа жауап</option>
+            <option value="file_upload">Файл жүктеу</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Атауы *</label><input id="a-title" placeholder="Тапсырма атауы"></div>
+        <div class="form-group" style="grid-column:span 2"><label>Мәтін түсіндірме (Сұрақ)</label><textarea id="a-text" rows="4"></textarea></div>
+        <div class="form-group" style="grid-column:span 2"><label>Сурет (Сілтеме)</label><input id="a-visual" placeholder="https://..."></div>
+      </div>
+
+      <!-- Specific to CODE -->
+      <div id="type-code-fields">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:10px">
+          <div class="form-group"><label>Кіріс форматы (Input)</label><textarea id="a-input" rows="2"></textarea></div>
+          <div class="form-group"><label>Шығыс форматы (Output)</label><textarea id="a-output" rows="2"></textarea></div>
+        </div>
+        <h4 style="margin:16px 0 8px;color:var(--primary);font-size:14px">🧪 Тест дереккөздері (10 тесткә дейін):</h4>
+        <div id="test-cases"></div>
+      </div>
+
+      <!-- Specific to QUIZ -->
+      <div id="type-quiz-fields" style="display:none;margin-top:10px">
+        <p style="font-size:12px;color:var(--text2);margin-bottom:10px">Тест нұсқаларын үтір арқылы жазыңыз, және дұрыс жауабын төменге жазыңыз.</p>
+        <div class="form-group"><label>Нұсқалар (үтірмен бөліңіз)</label><input id="q-options" placeholder="Астана, Алматы, Шымкент"></div>
+        <div class="form-group"><label>Дұрыс жауап мәтіні (Нұсқалардың бірімен дәл келуі шарт)</label><input id="q-answer" placeholder="Астана"></div>
+      </div>
+
+      <!-- Specific to SHORT ANSWER -->
+      <div id="type-short-fields" style="display:none;margin-top:10px">
+        <div class="form-group"><label>Дұрыс жауап</label><input id="sa-answer" placeholder="Мысалы: 42"></div>
+      </div>
+
+      <!-- Common Fields -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
+        <div class="form-group"><label>🔍 Кішкене кеңес (5💎)</label><textarea id="a-hint-small" rows="2"></textarea></div>
+        <div class="form-group"><label>💡 Үлкен кеңес (15💎)</label><textarea id="a-hint-big" rows="2"></textarea></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="form-group"><label>📅 Дедлайн</label><input type="datetime-local" id="a-deadline" class="form-input"></div>
+        <div class="form-group"><label>⏳ Уақыт шектеуі (минут)</label><input type="number" id="a-time-limit" class="form-input" placeholder="Мысалы: 45"></div>
+      </div>
+      
+      <button class="btn btn-primary" style="width:100%;margin-top:12px" id="save-assignment-btn" onclick="saveAssignment()">💾 Сақтау</button>
+    </div>
+  </div>
+
+  <!-- Material Modal -->
+  <div class="modal-overlay" id="material-modal" style="display:none">
+    <div class="modal-box" style="max-width:400px">
+      <div class="modal-header"><h3>➕ Материал қосу</h3><button class="modal-close" onclick="document.getElementById('material-modal').style.display='none'">✕</button></div>
+      <input type="hidden" id="m-lesson-id">
+      <div class="form-group"><label>Атауы</label><input id="m-title" placeholder="Презентация PDF"></div>
+      <div class="form-group"><label>Түрі</label>
+        <select id="m-type" class="form-input">
+          <option value="pdf">PDF Құжат</option>
+          <option value="video">Видео (YouTube link)</option>
+          <option value="image">Сурет</option>
+          <option value="link">Сілтеме</option>
+        </select>
+      </div>
+      <div class="form-group"><label>URL сілтемесі</label><input id="m-url" placeholder="https://..."></div>
+      <button class="btn btn-primary" style="width:100%" onclick="saveMaterial()">Аяқтау</button>
+    </div>
+  </div>
+
+  <!-- Enroll Modal -->
+  <div class="modal-overlay" id="enroll-modal" style="display:none">
+    <div class="modal-box" style="max-width:400px">
+      <div class="modal-header"><h3>➕ Студент қосу</h3><button class="modal-close" onclick="document.getElementById('enroll-modal').style.display='none'">✕</button></div>
+      <div class="form-group"><label>Студент</label><select id="enroll-select" class="form-input"></select></div>
+      <button class="btn btn-primary" style="width:100%" onclick="enrollStudent()">Қосу</button>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/teacher-auth.js"></script>
+  <script src="js/bits.js"></script>
+  <script>
+    function showToast(msg,type){type=type||'info';var colors={success:'#00ff88',error:'#ff3c3c',warn:'#ffc800',info:'#7c3aed'};var t=document.createElement('div');t.style.cssText='position:fixed;top:20px;right:20px;z-index:99999;background:'+(colors[type]||colors.info)+';color:#000;padding:12px 20px;border-radius:10px;font-weight:700;font-family:JetBrains Mono,monospace;max-width:340px;animation:slideIn .3s ease;box-shadow:0 4px 20px rgba(0,0,0,.4)';t.textContent=msg;document.body.appendChild(t);setTimeout(function(){t.remove()},3500)}
+
+    if(!TeacherAuth.require()){}
+    var user = Auth.getCurrentUser();
+    var courseId = new URLSearchParams(location.search).get('courseId');
+    if(!courseId){window.location.href='teacher-dashboard.html';}
+
+    var editingLessonId = null;
+    var editingAssignmentId = null;
+    var allLessons = [];
+
+    // init test cases
+    function buildTestCases() {
+      var html='';
+      for(var i=1;i<=10;i++){
+        html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;padding:8px;background:var(--surface);border-radius:8px"><div class="form-group" style="margin:0"><label>Тест '+i+' кіріс</label><textarea id="tc-input-'+i+'" rows="2" style="font-size:12px"></textarea></div><div class="form-group" style="margin:0"><label>Тест '+i+' шығыс</label><textarea id="tc-output-'+i+'" rows="2" style="font-size:12px"></textarea></div></div>';
+      }
+      document.getElementById('test-cases').innerHTML=html;
+    }
+    buildTestCases();
+
+    // Tabs logic
+    function switchTab(tabId) {
+      document.getElementById('pane-lessons').style.display = 'none';
+      document.getElementById('pane-students').style.display = 'none';
+      document.getElementById('pane-chat').style.display = 'none';
+      if(document.getElementById('pane-submissions')) document.getElementById('pane-submissions').style.display = 'none';
+
+      document.getElementById('tab-lessons').style.color = 'var(--text3)';
+      document.getElementById('tab-students').style.color = 'var(--text3)';
+      document.getElementById('tab-chat').style.color = 'var(--text3)';
+      if(document.getElementById('tab-submissions')) document.getElementById('tab-submissions').style.color = 'var(--text3)';
+      
+      document.getElementById('pane-'+tabId).style.display = 'block';
+      document.getElementById('tab-'+tabId).style.color = 'var(--text)';
+      
+      if(tabId==='chat') loadChat();
+      if(tabId==='submissions') loadSubmissions();
+    }
+
+    // Toggle Assignment Type
+    function toggleType() {
+      var t = document.getElementById('a-type').value;
+      document.getElementById('type-code-fields').style.display = t==='code' ? 'block' : 'none';
+      document.getElementById('type-quiz-fields').style.display = t==='quiz' ? 'block' : 'none';
+      document.getElementById('type-short-fields').style.display = t==='short_answer' ? 'block' : 'none';
+    }
+
+    loadAll();
+
+    async function loadAll() {
+      try {
+        var course = await API.courses.getOne(courseId);
+        document.getElementById('course-info').innerHTML='<div style="display:flex;justify-content:space-between;align-items:center"><div><h1 style="font-size:20px">'+course.title+'</h1><p style="color:var(--text3);font-size:12px;margin-top:4px">'+course.subject+' · 🧑‍🏫 '+course.teacher_name+'</p></div><button class="btn btn-secondary btn-small">✏️ Өзгерту</button></div>'+(course.description?'<p style="color:var(--text2);font-size:13px;margin-top:8px">'+course.description+'</p>':'');
+        loadStudents();
+        loadLessons();
+      } catch(e) { showToast(e.message,'error'); }
+    }
+
+    // --- LESSONS ---
+    async function loadLessons() {
+      try {
+        allLessons = await API.lessons.getByCourse(courseId);
+        var assignments = await API.assignments.getByCourse(courseId);
+        var list = document.getElementById('lessons-list');
+        list.innerHTML='';
+
+        // Populate assignment modal lesson select
+        var sel = document.getElementById('a-lesson');
+        sel.innerHTML = '<option value="">(Сабақсыз еркін тапсырма)</option>';
+        allLessons.forEach(function(l) { sel.innerHTML += '<option value="'+l.id+'">'+l.title+'</option>'; });
+
+        // Render Lessons
+        if(allLessons.length===0 && assignments.length===0) {
+          list.innerHTML = '<p style="color:var(--text3)">Сабақтар жоқ. Бірінші сабақты қосыңыз.</p>';
+          return;
+        }
+
+        for (var i=0; i<allLessons.length; i++) {
+          var l = allLessons[i];
+          var materials = await API.lessons.getMaterials(l.id);
+          var l_assign = assignments.filter(function(a){return a.lesson_id === l.id;});
+          
+          var div = document.createElement('div');
+          div.className = 'card';
+          div.style.marginBottom = '16px';
+          
+          var timeStr = l.active_date ? '📅 ' + new Date(l.active_date).toLocaleDateString() + ' ' + (l.start_time?l.start_time.slice(0,5):'') + ' - ' + (l.end_time?l.end_time.slice(0,5):'') : 'Уақыт шектеусіз';
+
+          var mHtml = materials.map(function(m){return '<div style="display:inline-flex;align-items:center;background:var(--bg);padding:4px 8px;border-radius:4px;font-size:11px;margin:4px 4px 0 0">🔗 <a href="'+m.url+'" target="_blank" style="color:var(--primary);margin-left:4px">'+(m.title||m.material_type)+'</a><button onclick="deleteMaterial(\''+m.id+'\')" style="background:none;border:none;margin-left:6px;color:var(--error);cursor:pointer">✕</button></div>'}).join('');
+
+          var aHtml = l_assign.map(function(a){
+            var typeBadge = a.assignment_type==='quiz'?'❓ Тест':a.assignment_type==='code'?'💻 Код':a.assignment_type==='file_upload'?'📎 Файл':'📝 Мәтін';
+            return '<div style="background:var(--bg);padding:10px;border-radius:8px;margin-top:8px;display:flex;justify-content:space-between;align-items:center"><div style="font-size:13px"><span style="color:var(--text3);margin-right:8px">['+typeBadge+']</span>'+a.title+'</div><div><button class="btn btn-small btn-secondary" onclick="editAssignment(\''+a.id+'\')">✏️</button><button class="btn btn-small btn-danger" style="margin-left:4px" onclick="deleteAssignment(\''+a.id+'\')">🗑️</button></div></div>';
+          }).join('');
+
+          div.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:flex-start">
+              <div>
+                <h3 style="font-size:16px;color:var(--primary)">📘 ${l.title}</h3>
+                <p style="color:var(--text2);font-size:12px;margin-top:4px">${l.description||''}</p>
+                <p style="color:var(--text3);font-size:11px;margin-top:4px">${timeStr}</p>
+              </div>
+              <div style="display:flex;gap:4px">
+                <button class="btn btn-small btn-secondary" onclick="openMaterialModal('${l.id}')">📎 Матер.</button>
+                <button class="btn btn-small btn-secondary" onclick="editLesson('${l.id}')">✏️</button>
+                <button class="btn btn-small btn-danger" onclick="deleteLesson('${l.id}')">🗑️</button>
+                <button class="btn btn-small btn-primary" onclick="openAssignmentModal('${l.id}')">➕ Тапсырма</button>
+              </div>
+            </div>
+            ${mHtml ? '<div style="margin-top:8px">'+mHtml+'</div>' : ''}
+            ${aHtml ? '<div style="border-top:1px solid var(--border);margin-top:12px;padding-top:8px">'+aHtml+'</div>' : ''}
+          `;
+          list.appendChild(div);
+        }
+
+        // Render orphan assignments
+        var orphan = assignments.filter(function(a){return !a.lesson_id;});
+        if(orphan.length>0){
+          var odiv = document.createElement('div');
+          odiv.innerHTML = '<h4 style="margin:20px 0 10px;color:var(--text3)">Сабақсыз тапсырмалар</h4>';
+          odiv.innerHTML += orphan.map(function(a){
+            return '<div class="card" style="margin-bottom:8px;display:flex;justify-content:space-between;align-items:center"><div style="font-size:13px">'+a.title+'</div><div><button class="btn btn-small btn-secondary" onclick="editAssignment(\''+a.id+'\')">✏️</button></div></div>';
+          }).join('');
+          list.appendChild(odiv);
+        }
+
+      } catch(e) { showToast(e.message,'error'); }
+    }
+
+    function openLessonModal() {
+      editingLessonId = null;
+      document.getElementById('lm-title').textContent = '➕ Жаңа сабақ';
+      document.getElementById('l-title').value = '';
+      document.getElementById('l-desc').value = '';
+      document.getElementById('l-date').value = '';
+      document.getElementById('l-start').value = '';
+      document.getElementById('l-end').value = '';
+      document.getElementById('lesson-modal').style.display = 'flex';
+    }
+
+    async function editLesson(id) {
+       try {
+         var l = await API.lessons.getOne(id);
+         editingLessonId = id;
+         document.getElementById('lm-title').textContent = '✏️ Сабақты өзгерту';
+         document.getElementById('l-title').value = l.title;
+         document.getElementById('l-desc').value = l.description||'';
+         document.getElementById('l-date').value = l.active_date ? l.active_date.split('T')[0] : '';
+         document.getElementById('l-start').value = l.start_time||'';
+         document.getElementById('l-end').value = l.end_time||'';
+         document.getElementById('lesson-modal').style.display = 'flex';
+       } catch(e){showToast(e.message,'error');}
+    }
+
+    async function saveLesson() {
+      var d = {
+        course_id: courseId,
+        title: document.getElementById('l-title').value,
+        description: document.getElementById('l-desc').value,
+        active_date: document.getElementById('l-date').value || null,
+        start_time: document.getElementById('l-start').value || null,
+        end_time: document.getElementById('l-end').value || null
+      };
+      try {
+        if(editingLessonId) { await API.lessons.update(editingLessonId, d); showToast('Жаңартылды','success'); }
+        else { await API.lessons.create(d); showToast('Сақталды','success'); }
+        document.getElementById('lesson-modal').style.display = 'none';
+        loadLessons();
+      } catch(e){showToast(e.message,'error');}
+    }
+
+    async function deleteLesson(id) {
+      if(!confirm('Жоюға сенімдісіз бе?')) return;
+      try { await API.lessons.remove(id); showToast('Жойылды','success'); loadLessons(); }catch(e){showToast(e.message,'error');}
+    }
+
+    // --- MATERIALS ---
+    function openMaterialModal(lessonId) {
+      document.getElementById('m-lesson-id').value = lessonId;
+      document.getElementById('m-title').value = '';
+      document.getElementById('m-url').value = '';
+      document.getElementById('material-modal').style.display = 'flex';
+    }
+    
+    async function saveMaterial() {
+      var lId = document.getElementById('m-lesson-id').value;
+      var t = document.getElementById('m-type').value;
+      var title = document.getElementById('m-title').value;
+      var url = document.getElementById('m-url').value;
+      if(!url){showToast('Сілтеме қажет','warn');return;}
+      try {
+        await API.lessons.addMaterial(lId, { material_type: t, title: title, url: url });
+        showToast('Материал қосылды','success');
+        document.getElementById('material-modal').style.display = 'none';
+        loadLessons();
+      } catch(e){showToast(e.message,'error');}
+    }
+    
+    async function deleteMaterial(id) {
+      if(!confirm('Материалды жойылсын?'))return;
+      try{ await API.lessons.removeMaterial(id); showToast('Жойылды','success'); loadLessons(); }catch(e){}
+    }
+
+    // --- ASSIGNMENTS ---
+    function openAssignmentModal(lessonId) {
+      editingAssignmentId=null;
+      document.getElementById('am-title').textContent='➕ Жаңа тапсырма';
+      if(lessonId) document.getElementById('a-lesson').value = lessonId;
+      
+      document.getElementById('a-type').value='code';
+      document.getElementById('a-title').value='';
+      document.getElementById('a-text').value='';
+      document.getElementById('a-visual').value='';
+      document.getElementById('a-input').value='';
+      document.getElementById('a-output').value='';
+      document.getElementById('q-options').value='';
+      document.getElementById('q-answer').value='';
+      document.getElementById('sa-answer').value='';
+      document.getElementById('a-hint-small').value='';
+      document.getElementById('a-hint-big').value='';
+      document.getElementById('a-deadline').value='';
+      document.getElementById('a-time-limit').value='';
+      for(var i=1;i<=10;i++){document.getElementById('tc-input-'+i).value='';document.getElementById('tc-output-'+i).value='';}
+      toggleType();
+      document.getElementById('assignment-modal').style.display='flex';
+    }
+
+    async function editAssignment(id) {
+      try {
+        var a = await API.assignments.getOne(id);
+        editingAssignmentId=id;
+        document.getElementById('am-title').textContent='✏️ Тапсырманы өзгерту';
+        document.getElementById('a-lesson').value=a.lesson_id||'';
+        document.getElementById('a-type').value=a.assignment_type||'code';
+        document.getElementById('a-title').value=a.title||'';
+        document.getElementById('a-text').value=a.text_explanation||'';
+        document.getElementById('a-visual').value=a.visual_explanation||'';
+        document.getElementById('a-input').value=a.input_format||'';
+        document.getElementById('a-output').value=a.output_format||'';
+        document.getElementById('a-hint-small').value=a.hint_small||'';
+        document.getElementById('a-hint-big').value=a.hint_big||'';
+        document.getElementById('a-deadline').value=a.deadline?a.deadline.slice(0,16):'';
+        document.getElementById('a-time-limit').value=a.time_limit||'';
+        
+        toggleType();
+        var tc = a.test_cases||[];
+        
+        if (a.assignment_type === 'quiz') {
+           if(tc[0] && tc[0].options) document.getElementById('q-options').value = tc[0].options.join(', ');
+           if(tc[0] && tc[0].answer) document.getElementById('q-answer').value = tc[0].answer;
+        } else if (a.assignment_type === 'short_answer') {
+           if(tc[0] && tc[0].answer) document.getElementById('sa-answer').value = tc[0].answer;
+        } else {
+           for(var i=0;i<10;i++){
+             var inpEl=document.getElementById('tc-input-'+(i+1)), outEl=document.getElementById('tc-output-'+(i+1));
+             if(inpEl&&outEl) { inpEl.value=tc[i]?tc[i].input:''; outEl.value=tc[i]?tc[i].expected_output:''; }
+           }
+        }
+        document.getElementById('assignment-modal').style.display='flex';
+      } catch(e){showToast(e.message,'error');}
+    }
+
+    async function saveAssignment() {
+      var type = document.getElementById('a-type').value;
+      var tc = [];
+      
+      if (type === 'quiz') {
+         tc.push({
+           options: document.getElementById('q-options').value.split(',').map(function(s){return s.trim();}),
+           answer: document.getElementById('q-answer').value.trim()
+         });
+      } else if (type === 'short_answer') {
+         tc.push({ answer: document.getElementById('sa-answer').value.trim() });
+      } else if (type === 'code') {
+         for(var i=1;i<=10;i++){
+           var inp=document.getElementById('tc-input-'+i).value;
+           var out=document.getElementById('tc-output-'+i).value;
+           if(inp||out) tc.push({input:inp,expected_output:out});
+         }
+      }
+
+      var data = {
+        course_id: courseId,
+        lesson_id: document.getElementById('a-lesson').value || null,
+        title: document.getElementById('a-title').value,
+        assignment_type: type,
+        text_explanation: document.getElementById('a-text').value,
+        visual_explanation: document.getElementById('a-visual').value,
+        input_format: document.getElementById('a-input').value,
+        output_format: document.getElementById('a-output').value,
+        test_cases: tc,
+        hint_small: document.getElementById('a-hint-small').value,
+        hint_big: document.getElementById('a-hint-big').value,
+        deadline: document.getElementById('a-deadline').value||null,
+        time_limit: document.getElementById('a-time-limit').value||null
+      };
+      try {
+        if(editingAssignmentId) { await API.assignments.update(editingAssignmentId,data); showToast('Жаңартылды!','success'); }
+        else { await API.assignments.create(data); showToast('Жасалды!','success'); }
+        document.getElementById('assignment-modal').style.display='none';
+        loadLessons();
+      } catch(e) { showToast(e.message,'error'); }
+    }
+
+    async function deleteAssignment(id) {
+      if(!confirm('Жоюға сенімдісіз бе?'))return;
+      try{await API.assignments.remove(id);showToast('Жойылды','success');loadLessons();}catch(e){showToast(e.message,'error');}
+    }
+
+    // --- STUDENTS ---
+    async function loadStudents() {
+      try {
+        var students = await API.courses.getStudents(courseId);
+        var body = document.getElementById('students-body');
+        body.innerHTML='';
+        students.forEach(function(s) {
+          body.innerHTML+='<tr><td>'+s.display_name+'</td><td><span class="bits-badge" style="font-size:11px">💎 '+s.bits_balance+'</span></td><td>'+s.warnings_count+'</td><td style="color:var(--text3);font-size:11px">'+new Date(s.enrolled_at).toLocaleDateString('kk-KZ')+'</td><td><button class="btn btn-small btn-danger" onclick="unenroll(\''+s.id+'\')">Шығару</button></td></tr>';
+        });
+      } catch(e){}
+    }
+
+    async function openEnrollModal() {
+      document.getElementById('enroll-modal').style.display='flex';
+      try {
+        var users = await API.admin.getUsers();
+        var enrolled = await API.courses.getStudents(courseId);
+        var enrolledIds = enrolled.map(function(s){return s.id;});
+        var sel = document.getElementById('enroll-select');
+        sel.innerHTML='';
+        users.filter(function(u){return u.role==='student'&&!enrolledIds.includes(u.id);}).forEach(function(u){
+          sel.innerHTML+='<option value="'+u.id+'">'+u.display_name+' ('+u.username+')</option>';
+        });
+      } catch(e){ showToast(e.message,'error'); }
+    }
+
+    async function enrollStudent() {
+      var sid=document.getElementById('enroll-select').value;
+      if(!sid){showToast('Студент таңдаңыз','warn');return;}
+      try{await API.courses.enroll(courseId,sid);showToast('Студент қосылды!','success');document.getElementById('enroll-modal').style.display='none';loadStudents();}catch(e){showToast(e.message,'error');}
+    }
+
+    async function unenroll(sid) {
+      if(!confirm('Студентті шығару?'))return;
+      try{await API.courses.unenroll(courseId,sid);showToast('Шығарылды','success');loadStudents();}catch(e){showToast(e.message,'error');}
+    }
+
+    // --- CHAT ---
+    async function loadChat() {
+      var box = document.getElementById('chat-messages');
+      box.innerHTML = '<p style="color:var(--text3);text-align:center">Жүктелуде...</p>';
+      try {
+        var msgs = await API.comments.getByCourse(courseId);
+        box.innerHTML = msgs.length === 0 ? '<p style="color:var(--text3);text-align:center">Хабарлама жоқ</p>' : msgs.map(function(m){
+           var isMe = m.user_id === user.id;
+           var roleColor = m.role==='teacher'?'var(--primary)':'var(--text2)';
+           return '<div style="margin-bottom:8px;text-align:'+(isMe?'right':'left')+'"><div style="display:inline-block;max-width:70%;padding:8px 12px;border-radius:8px;background:'+(isMe?'var(--surface)':'var(--bg)')+'"><div style="font-size:11px;color:'+roleColor+';margin-bottom:4px"><b>'+m.display_name+'</b> ('+new Date(m.created_at).toLocaleTimeString().slice(0,5)+')</div><div style="font-size:13px">'+m.message+'</div></div></div>';
+        }).join('');
+        box.scrollTop = box.scrollHeight;
+      } catch(e){showToast(e.message,'error')}
+    }
+
+    async function sendChat() {
+      var input = document.getElementById('chat-input');
+      var val = input.value.trim();
+      if(!val) return;
+      input.value = '';
+      try {
+        await API.comments.create({course_id: courseId, message: val});
+        loadChat();
+      } catch(e){showToast(e.message,'error')}
+    }
+
+    async function loadSubmissions() {
+      var box = document.getElementById('submissions-list');
+      box.innerHTML = '<p>Жүктелуде...</p>';
+      try {
+         var subs = await API.submissions.get({courseId: courseId});
+         if(subs.length === 0) { box.innerHTML = '<p style="color:var(--text3)">Орындалған тапсырмалар жоқ.</p>'; return; }
+         var assignments = await API.assignments.getByCourse(courseId);
+         var aMap = {}; assignments.forEach(function(a){ aMap[a.id] = a; });
+         
+         box.innerHTML = subs.map(function(s) {
+           var aTitle = aMap[s.assignment_id] ? aMap[s.assignment_id].title : 'Белгісіз тапсырма';
+           return '<div class="card" style="margin-bottom:10px">' +
+             '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">' +
+               '<div><strong style="color:var(--primary)">' + s.student_name + '</strong> — <span style="font-size:13px">' + aTitle + '</span></div>' +
+               '<div style="font-size:12px;color:var(--text3)">' + new Date(s.submitted_at).toLocaleString('kk-KZ') + '</div>' +
+             '</div>' +
+             '<pre style="background:var(--bg);padding:10px;border-radius:8px;font-size:12px;white-space:pre-wrap;max-height:150px;overflow-y:auto;border:1px solid var(--border);margin-bottom:10px">' + (s.code||'Бос') + '</pre>' +
+             '<div style="display:flex;align-items:center;gap:10px">' +
+               '<span style="font-size:13px">Баға (0-100):</span>' +
+               '<input type="number" id="score-'+s.id+'" class="form-input" style="width:80px;padding:4px 8px" value="'+(s.score!=null?s.score:0)+'">' +
+               '<button class="btn btn-primary btn-small" onclick="gradeSubmission(\''+s.id+'\')">Сақтау</button>' +
+             '</div>' +
+           '</div>';
+         }).join('');
+      } catch(e) { box.innerHTML = '<p style="color:var(--danger)">Қате: '+e.message+'</p>'; }
+    }
+
+    async function gradeSubmission(sId) {
+      var val = document.getElementById('score-'+sId).value;
+      try {
+        await API.submissions.update(sId, {score: parseInt(val)});
+        showToast('Баға сақталды!', 'success');
+      } catch(e) { showToast(e.message, 'error'); }
+    }
+
+  </script>
+</body>
+</html>

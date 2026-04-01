@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>⚔️ Батл — PyGame.okmpu</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+    /* ── Battle Page Styles ── */
+    .battle-hero {
+      text-align: center;
+      padding: 40px 20px 24px;
+      background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(139, 111, 212, .1), transparent);
+    }
+    .battle-hero h1 { font-size: 28px; font-weight: 800; letter-spacing: -0.5px; }
+    .battle-hero h1 span { color: var(--primary); }
+    .battle-hero p { color: var(--text3); font-size: 13px; margin: 8px auto 0; max-width: 440px; }
+
+    /* ── Battle Card List ── */
+    .battles-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 12px;
+    }
+    .battle-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 20px;
+      cursor: pointer;
+      transition: var(--transition);
+      position: relative;
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+    }
+    .battle-card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      background: linear-gradient(90deg, var(--primary), var(--primary-dark));
+    }
+    .battle-card:hover { border-color: var(--primary); transform: translateY(-3px); box-shadow: var(--shadow); }
+    .bc-title { font-size: 16px; font-weight: 700; margin-bottom: 8px; color: var(--text1); }
+    .bc-meta { color: var(--text3); font-size: 12px; display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+    .bc-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 4px 10px; border-radius: 20px; font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .bc-open     { background: rgba(16, 185, 129, .08); color:#10B981; border:1px solid rgba(16, 185, 129, .2); }
+    .bc-progress { background: rgba(139, 111, 212, .08);  color:var(--primary);  border:1px solid rgba(139, 111, 212, .2); }
+    .bc-join-btn {
+      width: 100%; padding: 10px; border-radius: 10px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: #fff; font-weight: 700; font-size: 14px;
+      border: none; cursor: pointer; font-family: inherit;
+      transition: var(--transition);
+    }
+    .bc-join-btn:hover { box-shadow: 0 4px 12px rgba(139, 111, 212, 0.35); }
+    .bc-join-btn:hover { transform: scale(1.02); box-shadow: 0 6px 20px rgba(167, 139, 250, 0.4); }
+    .bc-join-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    /* ── Waiting Room ── */
+    .waiting-pulse {
+      display: flex; flex-direction: column; align-items: center;
+      padding: 60px 20px; text-align: center;
+    }
+    .pulse-ring {
+      width: 100px; height: 100px; border-radius: 50%;
+      background: rgba(167, 139, 250, .15);
+      border: 4px solid var(--primary);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 42px;
+      animation: pulseRing 2s ease-in-out infinite;
+      margin-bottom: 30px;
+      color: var(--primary);
+    }
+    @keyframes pulseRing {
+      0%,100% { box-shadow: 0 0 0 0 rgba(167, 139, 250, .4); }
+      50%   { box-shadow: 0 0 0 30px rgba(167, 139, 250, 0); }
+    }
+
+    /* ── Rules Modal layer ── */
+    .rules-modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(18, 18, 23, 0.8);
+      z-index: 1000;
+      display: flex; align-items: center; justify-content: center;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+    .rules-modal {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 28px;
+      width: 95%; max-width: 560px;
+      padding: 40px;
+      box-shadow: var(--shadow-lg);
+      animation: bounceIn .4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes bounceIn {
+      from { transform: scale(.95) translateY(20px); opacity:0; }
+      to   { transform: scale(1) translateY(0);  opacity:1; }
+    }
+    .rules-icon { font-size: 56px; text-align: center; margin-bottom: 16px; }
+    .rules-title { font-size: 28px; font-weight: 800; text-align: center; margin-bottom: 24px; letter-spacing: -0.5px; }
+    .rules-title span { color: var(--primary); }
+    .rules-list { list-style: none; margin-bottom: 30px; }
+    .rules-list li {
+      display: flex; gap: 14px; align-items: flex-start;
+      padding: 12px 0; border-bottom: 1px solid var(--border);
+      font-size: 14px; color: var(--text2);
+      line-height: 1.6;
+    }
+    .rules-list li:last-child { border-bottom: none; }
+    .rules-list li .rule-icon { font-size: 20px; flex-shrink: 0; }
+    .rules-rewards {
+      display: flex; gap: 12px; justify-content: center;
+      margin-bottom: 30px;
+    }
+    .rule-reward {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 16px; padding: 14px 20px; text-align: center; font-size: 13px;
+      flex: 1;
+    }
+    .rule-reward .val { font-size: 22px; font-weight: 800; margin-bottom: 4px; }
+    .rule-reward.win .val { color: #10B981; }
+    .rule-reward.lose .val { color: #EF4444; }
+    .rule-reward.bits .val { color: var(--primary); }
+    .rules-btns { display: flex; gap: 12px; }
+.rules-btns { display: flex; gap: 10px; }
+
+    /* ── Battle Arena ── */
+    .arena-header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 12px;
+    }
+    .arena-timer {
+      font-size: 28px; font-weight: 800; color: #EF4444;
+      font-variant-numeric: tabular-nums;
+      padding: 8px 20px;
+      background: rgba(239,68,68,.1);
+      border: 1px solid rgba(239,68,68,.3);
+      border-radius: 14px;
+      box-shadow: 0 4px 12px rgba(239,68,68,0.1);
+    }
+    .arena-timer.warn { animation: timerBlink .5s ease infinite; color: #fff; background: #EF4444; }
+    @keyframes timerBlink { 50% { opacity:.7; } }
+
+    .arena-vs {
+      display: flex; align-items: center; gap: 16px; font-size: 14px;
+    }
+    .arena-player {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 16px; border-radius: 50px;
+      background: var(--card); border: 1px solid var(--border);
+      font-weight: 700;
+    }
+    .arena-player.you { border-color: #10B981; color: #10B981; }
+    .arena-player.opp { border-color: var(--primary); color: var(--primary); }
+    .arena-player .av {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: currentColor; color: #FFFFFF;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 800;
+    }
+    .vs-badge { color: var(--text3); font-weight: 800; font-size: 18px; margin: 0 4px; }
+
+    .arena-layout {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 0; height: calc(100vh - 160px); background: var(--bg);
+    }
+    @media (max-width: 768px) {
+      .arena-layout { grid-template-columns: 1fr; height: auto; }
+    }
+    .arena-left {
+      border-right:1px solid var(--border);
+      padding: 30px; overflow-y: auto;
+      background: var(--card);
+    }
+    .arena-right {
+      display: flex; flex-direction: column; padding: 24px;
+    }
+    .arena-right textarea {
+      flex: 1; min-height: 300px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 16px; padding: 18px; color: var(--text1);
+      font-family: 'JetBrains Mono', monospace; font-size: 14px;
+      resize: none; line-height: 1.7;
+    }
+    .arena-right textarea:focus { outline:none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.2); }
+    .arena-input-area {
+      margin-top: 16px;
+    }
+    .arena-input-area label { color: var(--text2); font-size: 12px; font-weight: 600; margin-bottom: 6px; display: block; }
+    .arena-input-area textarea {
+      width: 100%; min-height: 100px; padding: 12px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; color: var(--text1);
+      font-family: 'JetBrains Mono', monospace; font-size: 13px; resize: vertical;
+    }
+    .arena-btns { display: flex; gap: 12px; margin-top: 16px; }
+    .arena-submit {
+      flex: 1; padding: 14px; border-radius: 14px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: #fff; font-size: 16px; font-weight: 800;
+      border: none; cursor: pointer; font-family: inherit;
+      transition: var(--transition);
+      box-shadow: 0 4px 15px rgba(167, 139, 250, 0.3);
+    }
+    .arena-submit:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(167, 139, 250, 0.4); }
+    .arena-submit:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
+    .arena-run {
+      padding: 14px 22px; border-radius: 14px;
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--primary); font-weight: 700; cursor: pointer;
+      font-family: inherit; transition: var(--transition);
+    }
+    .arena-run:hover { border-color: var(--primary); background: rgba(167, 139, 250, 0.05); }
+
+    .opp-status {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 13px; font-weight: 600; color: var(--text2); padding: 8px 16px;
+      background: var(--surface); border-radius: 10px; margin-bottom: 16px;
+      border: 1px solid var(--border);
+    }
+    .opp-dot { width:10px;height:10px; border-radius:50%; background: var(--primary); animation:blink 1.5s infinite; }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
+
+    /* ── Winner Overlay ── */
+    .winner-overlay {
+      position: fixed; inset: 0; z-index: 2000;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(18, 18, 23, 0.85);
+      backdrop-filter: blur(12px);
+      animation: fadeIn .4s ease;
+    }
+    .winner-box {
+      background: var(--card);
+      border-radius: 32px;
+      padding: 48px;
+      text-align: center;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-lg);
+      animation: winPop .5s cubic-bezier(0.16, 1, 0.3, 1);
+      max-width: 480px; width: 95%;
+    }
+    .winner-box.you-win  { border-color: #10B981; box-shadow: 0 0 60px rgba(16, 185, 129, 0.15); }
+    .winner-box.you-lose { border-color: #EF4444; box-shadow: 0 0 60px rgba(239, 68, 68, 0.15); }
+    .winner-box.draw { border-color: var(--primary); box-shadow: 0 0 60px rgba(167, 139, 250, 0.15); }
+    @keyframes winPop {
+      from { transform: scale(.9) translateY(20px); opacity:0; }
+      to   { transform: scale(1) translateY(0);  opacity:1; }
+    }
+    .winner-emoji { font-size: 80px; margin-bottom: 20px; animation: wiggle .6s ease .3s; }
+    @keyframes wiggle { 0%,100%{transform:rotate(0)} 25%{transform:rotate(-12deg)} 75%{transform:rotate(12deg)} }
+    .winner-title { font-size: 32px; font-weight: 800; margin-bottom: 12px; letter-spacing: -1px; }
+    .winner-sub { color: var(--text2); font-size: 16px; margin-bottom: 24px; line-height: 1.6; }
+    .winner-pts { font-size: 36px; font-weight: 800; }
+
+    /* ── Confetti ── */
+    .confetti-piece {
+      position: fixed; width: 10px; height: 10px; border-radius: 2px;
+      animation: confettiFall linear forwards;
+      z-index: 3000; pointer-events: none;
+    }
+    @keyframes confettiFall {
+      0%   { transform: translateY(0) rotate(0deg); opacity:1; }
+      100% { transform: translateY(100vh) rotate(720deg); opacity:0; }
+    }
+
+    /* ── Opponent submitted banner ── */
+    .opp-submitted-banner {
+      background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.3);
+      border-radius: 8px; padding: 8px 14px; font-size: 12px; color: #f87171;
+      text-align: center; margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body class="grid-bg">
+
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <div class="logo"><a href="index.html" style="color:inherit;text-decoration:none"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--primary);margin-right:4px;vertical-align:bottom;"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" x2="20" y1="19" y2="19"></line></svg> <span>PyGame.okmpu</span></a></div>
+    <div class="nav-links">
+      
+      <span id="nav-user" style="color:var(--text3);font-size:13px"></span>
+      <a href="index.html" class="btn-ghost">← Басты бет</a>
+    </div>
+  </nav>
+
+  <!-- MAIN CONTENT — state-driven -->
+  <div id="page-lobby">
+    <div class="battle-hero">
+      <h1>⚔️ <span>Батл</span> режимі</h1>
+      <p>Бір есепте 1v1 бәсек! Ең алдымен дұрыс шешкен жеңеді.</p>
+    </div>
+    <div class="section" style="max-width:900px;margin:0 auto">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <h2 style="font-size:18px">🎯 Ашық батлдар</h2>
+        <button class="btn btn-secondary" onclick="loadBattles()" style="font-size:12px">🔄 Жаңарту</button>
+      </div>
+      <div class="battles-grid" id="battles-grid">
+        <div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text3)">
+          <div class="loader-spinner" style="margin:0 auto 12px"></div>Жүктелуде...
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WAITING ROOM -->
+  <div id="page-waiting" style="display:none">
+    <div class="section" style="max-width:500px;margin:0 auto;padding-top:60px;text-align:center">
+      <div class="waiting-pulse">
+        <div class="pulse-ring">⚔️</div>
+        <h2 style="font-size:22px;margin-bottom:8px">Қарсылас күтілуде...</h2>
+        <p style="color:var(--text3);font-size:13px" id="waiting-title"></p>
+        <p style="color:var(--text3);font-size:12px;margin-top:8px">Тағы бір оқушы кіргенде ойын автоматты басталады</p>
+        <div style="margin-top:20px;color:var(--text2);font-size:13px" id="waiting-count"></div>
+        <button class="btn btn-secondary" style="margin-top:24px" onclick="leaveWaiting()">← Шығу</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RULES MODAL -->
+  <div class="rules-modal-overlay" id="rules-overlay" style="display:none">
+    <div class="rules-modal">
+      <div class="rules-icon">⚔️</div>
+      <div class="rules-title">Батл <span>ережелері</span></div>
+      <ul class="rules-list" id="rules-list">
+        <li><span class="rule-icon">⏱️</span><span>Уақыт шегі: <strong id="rule-time">5 минут</strong>. Таймер басталғаннан кейін тоқтамайды!</span></li>
+        <li><span class="rule-icon">🎯</span><span>Тапсырманы 100% дұрыс шешкен жеңеді. Уақыт бітсе — жоғары балл алған жеңеді.</span></li>
+        <li><span class="rule-icon">🚫</span><span>Ctrl+C / Ctrl+V, оң батырма, басқа қойынды — тыйым салынған!</span></li>
+        <li><span class="rule-icon">✅</span><span>Шешімді жіберместен бұрын «Тексеру» батырмасын басыңыз.</span></li>
+      </ul>
+      <div class="rules-rewards" id="rules-rewards"></div>
+      <div class="rules-btns">
+        <button class="btn btn-secondary" style="flex:1" onclick="declineRules()">❌ Бас тарту</button>
+        <button class="btn btn-primary" style="flex:1;background:linear-gradient(135deg,#ef4444,#dc2626);border:none"
+                id="accept-btn" onclick="acceptRules()">⚔️ Қабылдау!</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BATTLE ARENA -->
+  <div id="page-arena" style="display:none">
+    <div class="arena-header">
+      <div class="arena-vs" id="arena-vs"></div>
+      <div class="arena-timer" id="arena-timer">05:00</div>
+      <div style="font-size:12px;color:var(--text3)" id="arena-battle-title"></div>
+    </div>
+    <div class="arena-layout">
+      <div class="arena-left" id="arena-problem"></div>
+      <div class="arena-right">
+        <div class="opp-status" id="opp-status"><div class="opp-dot"></div> Қарсылас ойнауда...</div>
+        <div class="opp-submitted-banner" id="opp-submitted" style="display:none">⚡ Қарсылас жіберді! Жылдам болыңыз!</div>
+        <textarea id="arena-code" placeholder="# Python кодыңызды осында жазыңыз..." spellcheck="false"></textarea>
+        <div class="arena-input-area">
+          <label>📥 Кіріс деректер (қажет болса):</label>
+          <textarea id="arena-input" placeholder="бірнеше жолмен кіріс мәліметтерді жазыңыз..."></textarea>
+        </div>
+        <div id="arena-results" style="margin-top:10px;max-height:140px;overflow-y:auto"></div>
+        <div class="arena-btns">
+          <button class="arena-run" onclick="runCode()">▶ Тексеру</button>
+          <button class="arena-submit" id="submit-btn" onclick="submitSolution()">⚔️ Жіберу</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WINNER OVERLAY -->
+  <div class="winner-overlay" id="winner-overlay" style="display:none">
+    <div class="winner-box" id="winner-box">
+      <div class="winner-emoji" id="winner-emoji"></div>
+      <div class="winner-title" id="winner-title"></div>
+      <div class="winner-sub" id="winner-sub"></div>
+      <div class="winner-pts" id="winner-pts"></div>
+      <button class="btn btn-secondary" style="margin-top:20px;width:100%" onclick="returnLobby()">🏠 Лоббиге қайту</button>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Skulpt for Python execution -->
+  <script src="https://skulpt.org/js/skulpt.min.js"></script>
+  <script src="https://skulpt.org/js/skulpt-stdlib.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/compiler.js"></script>
+
+  <script>
+    // ─── Global State ──────────────────────────────────────
+    var currentUser     = null;
+    var currentBattle   = null;
+    var pollTimer       = null;
+    var arenaTimer      = null;
+    var secondsLeft     = 300;
+    var lastSubmitted   = false;
+    var joinedBattleId  = null;
+
+    // ─── Init ─────────────────────────────────────────────
+    (function init() {
+      try { currentUser = Auth.getCurrentUser(); } catch(e) {}
+      if (currentUser) {
+        document.getElementById('nav-user').textContent = '👤 ' + currentUser.display_name;
+      }
+      loadBattles();
+    })();
+
+    // ─── Utilities ────────────────────────────────────────
+    function showToast(msg, type) {
+      var colors = { success:'#22c55e', error:'#ef4444', warn:'#ffc800', info:'#7c3aed' };
+      var t = document.createElement('div');
+      t.style.cssText = 'position:fixed;top:20px;right:20px;z-index:99999;background:' +
+        (colors[type]||colors.info)+';color:#000;padding:12px 20px;border-radius:10px;' +
+        'font-weight:700;font-family:JetBrains Mono,monospace;max-width:340px;animation:slideIn .3s ease;box-shadow:0 4px 20px rgba(0,0,0,.4)';
+      t.textContent = msg;
+      document.body.appendChild(t);
+      setTimeout(function(){ t.remove(); }, 3500);
+    }
+
+    function escH(s) {
+      return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function initials(name) {
+      var p = String(name||'?').trim().split(' ');
+      return (p[0][0]+(p[1]?p[1][0]:'')).toUpperCase();
+    }
+
+    function showPage(name) {
+      ['lobby','waiting','arena'].forEach(function(p){ document.getElementById('page-'+p).style.display = p===name?'block':'none'; });
+    }
+
+    // ─── Load Battles ─────────────────────────────────────
+    async function loadBattles() {
+      var grid = document.getElementById('battles-grid');
+      grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text3)"><div class="loader-spinner" style="margin:0 auto 12px"></div>Жүктелуде...</div>';
+      try {
+        var battles = await API.battles.getAll();
+        if (!battles.length) {
+          grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:48px;color:var(--text3)"><div style="font-size:48px">⚔️</div><div style="margin-top:12px">Ашық батл жоқ<br><small style="color:var(--text3);font-size:12px">Мұғалімге хабарласыңыз</small></div></div>';
+          return;
+        }
+        grid.innerHTML = '';
+        battles.forEach(function(b) {
+          var card = document.createElement('div');
+          card.className = 'battle-card';
+          var statusBadge = b.status === 'open' ?
+            '<span class="bc-badge bc-open">🟢 Ашық</span>' :
+            b.status === 'in_progress' ?
+            '<span class="bc-badge bc-progress">⚡ Жүріп жатыр</span>' :
+            '<span class="bc-badge bc-done">✅ Аяқталды</span>';
+
+          var rewardHTML = '';
+          if (b.reward_points) rewardHTML += '<span>⭐ ±'+b.reward_points+' бал</span>';
+          if (b.reward_bits)   rewardHTML += '<span>💎 '+b.reward_bits+' алмаз тігімі</span>';
+          var timeMin = Math.round((b.time_limit||300)/60);
+          var canJoin = b.status === 'open' && currentUser && currentUser.role === 'student';
+
+          card.innerHTML =
+            '<div class="bc-title">⚔️ '+escH(b.title)+'</div>'+
+            '<div class="bc-meta">'+
+              '<span>⏱ '+timeMin+' мин</span>'+
+              rewardHTML+
+              '<span>👨‍🏫 '+escH(b.teacher_name)+'</span>'+
+              '<span>👥 '+(b.participant_count||0)+' оқушы</span>'+
+            '</div>'+
+            statusBadge+'<br><br>'+
+            '<button class="bc-join-btn" '+(canJoin?'':'disabled')+
+            ' id="join-'+b.id+'">'+(canJoin?'⚔️ Қосылу':'🔒 '+(currentUser?'Недоступно':'Жүйеге кіріңіз'))+'</button>';
+
+          if (canJoin) {
+            card.querySelector('button').onclick = function(e) { e.stopPropagation(); joinBattle(b); };
+          }
+          grid.appendChild(card);
+        });
+      } catch(e) {
+        grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:#ef4444">'+escH(e.message)+'</div>';
+      }
+    }
+
+    // ─── Join Flow ────────────────────────────────────────
+    async function joinBattle(battle) {
+      if (!currentUser) { showToast('Жүйеге кіріңіз', 'warn'); return; }
+      var btn = document.getElementById('join-'+battle.id);
+      if (btn) { btn.disabled = true; btn.textContent = '⏳...'; }
+      try {
+        await API.battles.join(battle.id);
+        joinedBattleId = battle.id;
+        currentBattle = battle;
+        showRulesModal(battle);
+      } catch(e) {
+        showToast(e.message, 'error');
+        if (btn) { btn.disabled = false; btn.textContent = '⚔️ Қосылу'; }
+      }
+    }
+
+    function showRulesModal(battle) {
+      var timeMin = Math.round((battle.time_limit||300)/60);
+      document.getElementById('rule-time').textContent = timeMin + ' минут';
+
+      var rewardsHTML = '';
+      if (battle.reward_points) {
+        rewardsHTML +=
+          '<div class="rule-reward win"><div class="val">+'+battle.reward_points+'</div><div>Жеңіс балл</div></div>'+
+          '<div class="rule-reward lose"><div class="val">-'+battle.reward_points+'</div><div>Жеңіліс балл</div></div>';
+      }
+      if (battle.reward_bits) {
+        rewardsHTML += '<div class="rule-reward bits"><div class="val">💎'+battle.reward_bits*2+'</div><div>Жеңіске алмаз</div></div>';
+      }
+      document.getElementById('rules-rewards').innerHTML = rewardsHTML;
+      document.getElementById('rules-overlay').style.display = 'flex';
+    }
+
+    function declineRules() {
+      document.getElementById('rules-overlay').style.display = 'none';
+      joinedBattleId = null; currentBattle = null;
+      showPage('lobby'); loadBattles();
+    }
+
+    async function acceptRules() {
+      document.getElementById('accept-btn').disabled = true;
+      document.getElementById('accept-btn').textContent = '⏳...';
+      try {
+        var result = await API.battles.accept(joinedBattleId);
+        document.getElementById('rules-overlay').style.display = 'none';
+        document.getElementById('accept-btn').disabled = false;
+        document.getElementById('accept-btn').textContent = '⚔️ Қабылдау!';
+
+        if (result.battle_status === 'in_progress') {
+          // Both accepted — start immediately
+          startArena();
+        } else {
+          // Show waiting room
+          document.getElementById('waiting-title').textContent = '⚔️ ' + currentBattle.title;
+          showPage('waiting');
+          startWaitingPoll();
+        }
+      } catch(e) {
+        showToast(e.message, 'error');
+        document.getElementById('accept-btn').disabled = false;
+        document.getElementById('accept-btn').textContent = '⚔️ Қабылдау!';
+      }
+    }
+
+    // ─── Waiting Room Poller ──────────────────────────────
+    function startWaitingPoll() {
+      stopPolling();
+      var attempts = 0;
+      pollTimer = setInterval(async function() {
+        attempts++;
+        if (attempts > 120) { // 2 min max wait
+          stopPolling(); showPage('lobby'); loadBattles();
+          showToast('Қарсылас табылмады', 'warn');
+          return;
+        }
+        try {
+          var data = await API.battles.getOne(joinedBattleId);
+          var cnt = data.participants.filter(function(p){ return p.accepted; }).length;
+          document.getElementById('waiting-count').textContent = '✅ Қабылдаған: ' + cnt + '/2';
+
+          if (data.status === 'in_progress') {
+            stopPolling();
+            currentBattle = data;
+            startArena(data);
+          }
+          if (data.status === 'finished' || data.status === 'cancelled') {
+            stopPolling(); showPage('lobby'); loadBattles();
+          }
+        } catch(e) { console.error(e); }
+      }, 2000);
+    }
+
+    function stopPolling() {
+      if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+    }
+
+    function leaveWaiting() {
+      stopPolling(); joinedBattleId = null; currentBattle = null;
+      showPage('lobby'); loadBattles();
+    }
+
+    // ─── Arena ────────────────────────────────────────────
+    async function startArena(battleData) {
+      showPage('arena');
+      try {
+        currentBattle = battleData || await API.battles.getOne(joinedBattleId);
+      } catch(e) {}
+
+      // Render problem
+      var p = currentBattle;
+      var problemHTML =
+        '<h2 style="color:#ef4444;font-size:18px;margin-bottom:12px">⚔️ '+escH(p.title)+'</h2>'+
+        '<div style="color:var(--text1);line-height:1.8;white-space:pre-wrap">'+escH(p.problem_text)+'</div>';
+      if (p.input_format) problemHTML += '<h4 style="color:var(--primary);margin-top:16px">📥 Кіріс форматы:</h4><p style="color:var(--text2)">'+escH(p.input_format)+'</p>';
+      if (p.output_format) problemHTML += '<h4 style="color:var(--primary);margin-top:8px">📤 Шығыс форматы:</h4><p style="color:var(--text2)">'+escH(p.output_format)+'</p>';
+      var tests = p.test_cases || [];
+      if (tests.length) {
+        problemHTML += '<h4 style="color:var(--primary);margin-top:16px">🧪 Мысалдар:</h4>';
+        tests.slice(0,3).forEach(function(tc,i) {
+          problemHTML +=
+            '<div style="display:flex;gap:8px;margin-top:8px">'+
+            '<pre style="flex:1;background:var(--surface);padding:8px;border-radius:6px;font-size:11px;overflow:auto"><b>Кіріс:</b>\n'+escH(tc.input||'')+'</pre>'+
+            '<pre style="flex:1;background:var(--surface);padding:8px;border-radius:6px;font-size:11px;overflow:auto"><b>Шығыс:</b>\n'+escH(tc.expected_output||tc.output||'')+'</pre>'+
+            '</div>';
+        });
+      }
+      document.getElementById('arena-problem').innerHTML = problemHTML;
+      document.getElementById('arena-battle-title').textContent = p.title;
+
+      // Build VS header
+      var me = (p.participants||[]).find(function(pp){ return pp.student_id === currentUser.id; });
+      var opp = (p.participants||[]).find(function(pp){ return pp.student_id !== currentUser.id; });
+      document.getElementById('arena-vs').innerHTML =
+        '<div class="arena-player you"><div class="av">'+initials(currentUser.display_name)+'</div> '+escH(currentUser.display_name)+' <span style="font-size:10px">(Сіз)</span></div>'+
+        '<span class="vs-badge">VS</span>'+
+        '<div class="arena-player opp"><div class="av" style="background:#ef4444">'+
+        (opp?initials(opp.student_name):'?')+'</div> '+(opp?escH(opp.student_name):'Күтілуде...')+'</div>';
+
+      // Start timer
+      secondsLeft = p.time_limit || 300;
+      startTimer();
+
+      // Block copy/paste/context
+      blockCheats();
+
+      // Start arena polling
+      startArenaPoll();
+    }
+
+    // ─── Timer ────────────────────────────────────────────
+    function startTimer() {
+      stopTimer();
+      updateTimerDisplay();
+      arenaTimer = setInterval(function() {
+        secondsLeft--;
+        updateTimerDisplay();
+        if (secondsLeft <= 30) {
+          document.getElementById('arena-timer').classList.add('warn');
+        }
+        if (secondsLeft <= 0) {
+          stopTimer();
+          onTimeout();
+        }
+      }, 1000);
+    }
+
+    function stopTimer() {
+      if (arenaTimer) { clearInterval(arenaTimer); arenaTimer = null; }
+    }
+
+    function updateTimerDisplay() {
+      var m = Math.floor(Math.max(0,secondsLeft)/60);
+      var s = Math.max(0,secondsLeft)%60;
+      document.getElementById('arena-timer').textContent = String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+    }
+
+    async function onTimeout() {
+      stopArenaPoll();
+      try { await API.battles.timeout(joinedBattleId); } catch(e){}
+      var data = await API.battles.getOne(joinedBattleId);
+      var me = (data.participants||[]).find(function(p){ return p.student_id === currentUser.id; });
+      if (me && me.result === 'win') {
+        showWinner('win', data);
+      } else if (me && me.result === 'lose') {
+        showWinner('lose', data);
+      } else {
+        showWinner('draw', data);
+      }
+    }
+
+    // ─── Arena Poller (check opponent status) ─────────────
+    function startArenaPoll() {
+      stopPolling();
+      pollTimer = setInterval(async function() {
+        if (!joinedBattleId) return;
+        try {
+          var data = await API.battles.getOne(joinedBattleId);
+          var opp = (data.participants||[]).find(function(p){ return p.student_id !== currentUser.id; });
+
+          // Show opponent submitted banner
+          if (opp && opp.submitted_at && !lastSubmitted) {
+            document.getElementById('opp-submitted').style.display = 'block';
+          }
+
+          if (data.status === 'finished') {
+            stopPolling(); stopTimer();
+            var me = (data.participants||[]).find(function(p){ return p.student_id === currentUser.id; });
+            if (me && me.result) {
+              showWinner(me.result, data);
+            }
+          }
+        } catch(e) {}
+      }, 2000);
+    }
+
+    function stopArenaPoll() { stopPolling(); }
+
+    // ─── Code Execution ───────────────────────────────────
+    async function runCode() {
+      var code = document.getElementById('arena-code').value;
+      var inputRaw = document.getElementById('arena-input').value;
+      if (!code.trim()) { showToast('Код жазыңыз', 'warn'); return; }
+      document.getElementById('arena-results').innerHTML = '<div class="loader-spinner" style="margin:12px auto;width:28px;height:28px"></div>';
+
+      try {
+        var tests = (currentBattle||{}).test_cases || [];
+        if (tests.length > 0) {
+          var r = await PyCompiler.runTests(code, tests);
+          PyCompiler.renderResults(document.getElementById('arena-results'), r);
+        } else {
+          // Free run with provided input
+          var inputLines = inputRaw.split('\n');
+          var r = await PyCompiler.run(code, inputLines);
+          document.getElementById('arena-results').innerHTML =
+            '<pre style="background:var(--surface);padding:10px;border-radius:8px;font-size:12px;max-height:120px;overflow-y:auto;color:var(--primary)">'+(r.error?'❌ '+escH(r.error):escH(r.output||'(бос)'))+'</pre>';
+        }
+      } catch(e) {
+        document.getElementById('arena-results').innerHTML = '<p style="color:#ef4444">'+escH(e.message)+'</p>';
+      }
+    }
+
+    // ─── Submit Solution ──────────────────────────────────
+    async function submitSolution() {
+      if (lastSubmitted) { showToast('Бұрын жіберілген', 'warn'); return; }
+      var code = document.getElementById('arena-code').value;
+      if (!code.trim()) { showToast('Алдымен кодты жазыңыз', 'warn'); return; }
+
+      var submitBtn = document.getElementById('submit-btn');
+      submitBtn.disabled = true; submitBtn.textContent = '⏳ Тексерілуде...';
+
+      try {
+        var tests = (currentBattle||{}).test_cases || [];
+        var score = 0, passed = 0, total = tests.length;
+        if (tests.length > 0) {
+          var r = await PyCompiler.runTests(code, tests);
+          score = r.score; passed = r.passed; total = r.total;
+          PyCompiler.renderResults(document.getElementById('arena-results'), r);
+        } else {
+          score = 100; passed = 1; total = 1;
+        }
+
+        lastSubmitted = true;
+        var result = await API.battles.submit(joinedBattleId, { code, score, passed_tests: passed, total_tests: total });
+        stopArenaPoll();
+
+        if (result.winner_declared) {
+          stopTimer();
+          var me = (result.participants||[]).find(function(p){ return p.student_id === currentUser.id; });
+          showWinner(me ? me.result : 'draw', { participants: result.participants, reward_points: currentBattle.reward_points, reward_bits: currentBattle.reward_bits, title: currentBattle.title });
+        } else {
+          showToast('Жіберілді! Қарсылас күтілуде...', 'info');
+          submitBtn.textContent = '✅ Жіберілді';
+          startArenaPoll();
+        }
+      } catch(e) {
+        showToast(e.message, 'error');
+        submitBtn.disabled = false; submitBtn.textContent = '⚔️ Жіберу';
+      }
+    }
+
+    // ─── Winner Declaration + Confetti ────────────────────
+    function showWinner(result, data) {
+      var overlay = document.getElementById('winner-overlay');
+      var box     = document.getElementById('winner-box');
+      var emoji   = document.getElementById('winner-emoji');
+      var title   = document.getElementById('winner-title');
+      var sub     = document.getElementById('winner-sub');
+      var pts     = document.getElementById('winner-pts');
+
+      box.className = 'winner-box';
+      if (result === 'win') {
+        box.classList.add('you-win');
+        emoji.textContent = '🏆';
+        title.textContent = 'ЖЕҢІС!';
+        title.style.color = '#22c55e';
+        sub.textContent = 'Керемет! Сіз бірінші болдыңыз!';
+        pts.innerHTML = '<span style="color:#22c55e">+' + (data.reward_points||5) + ' бал</span>' +
+          (data.reward_bits ? '&nbsp; <span style="color:#c4b5fd">💎 ×' + (data.reward_bits*2) + '</span>' : '');
+        launchConfetti();
+      } else if (result === 'lose') {
+        box.classList.add('you-lose');
+        emoji.textContent = '😔';
+        title.textContent = 'Жеңіліс';
+        title.style.color = '#ef4444';
+        sub.textContent = 'Ештеңе емес — келесі жолы жеңесіз!';
+        pts.innerHTML = '<span style="color:#ef4444">-' + (data.reward_points||5) + ' бал</span>';
+      } else {
+        box.classList.add('draw');
+        emoji.textContent = '🤝';
+        title.textContent = 'Тең нәтиже';
+        title.style.color = 'var(--primary)';
+        sub.textContent = 'Екеуіңіз де бірдей нәтиже көрсеттіңіз!';
+        pts.textContent = '±0';
+      }
+
+      overlay.style.display = 'flex';
+    }
+
+    function launchConfetti() {
+      var colors = ['#ef4444','#22c55e','#ffc800','#7c3aed','#3b82f6','#ec4899'];
+      for (var i = 0; i < 80; i++) {
+        (function(i) {
+          setTimeout(function() {
+            var piece = document.createElement('div');
+            piece.className = 'confetti-piece';
+            piece.style.left = Math.random()*100 + 'vw';
+            piece.style.top  = '-10px';
+            piece.style.backgroundColor = colors[Math.floor(Math.random()*colors.length)];
+            piece.style.width  = (6+Math.random()*8)+'px';
+            piece.style.height = (6+Math.random()*8)+'px';
+            piece.style.animationDuration = (2+Math.random()*2)+'s';
+            piece.style.animationDelay = '0s';
+            document.body.appendChild(piece);
+            setTimeout(function(){ piece.remove(); }, 4000);
+          }, i*35);
+        })(i);
+      }
+    }
+
+    function returnLobby() {
+      document.getElementById('winner-overlay').style.display = 'none';
+      stopTimer(); stopPolling();
+      joinedBattleId = null; currentBattle = null; lastSubmitted = false;
+      showPage('lobby'); loadBattles();
+    }
+
+    // ─── Anti-Cheat on Arena ──────────────────────────────
+    function blockCheats() {
+      document.addEventListener('contextmenu', function(e){ e.preventDefault(); }, true);
+      document.addEventListener('keydown', function(e) {
+        if (e.ctrlKey && ['c','v','u','C','V','U'].includes(e.key)) e.preventDefault();
+        if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && ['I','J'].includes(e.key))) e.preventDefault();
+      }, true);
+      document.addEventListener('copy',  function(e){ e.preventDefault(); }, true);
+      document.addEventListener('paste', function(e){
+        if (e.target && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') e.preventDefault();
+      }, true);
+    }
+
+    // Auto-refresh lobby every 10s
+    var autoRefresh = setInterval(function() {
+      if (document.getElementById('page-lobby').style.display !== 'none') {
+        loadBattles();
+      }
+    }, 10000);
+  </script>
+</body>
+</html>

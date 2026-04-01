@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="kk" data-theme="dark">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>📝 Тапсырма — PyGame.okmpu</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .solve-layout { display:grid; grid-template-columns:1fr 1fr; height:calc(100vh - 120px); background: var(--bg); }
+    @media(max-width:900px){ .solve-layout{grid-template-columns:1fr;height:auto;} }
+    .solve-left  { border-right:1px solid var(--border); padding:30px; overflow-y:auto; background: var(--card); }
+    .solve-right { display:flex; flex-direction:column; padding:24px; overflow:hidden; }
+    .code-editor-area { flex:1; min-height:300px; resize:none; border-radius: 16px; padding: 20px; border: 1px solid var(--border); background: var(--surface); color: var(--text1); font-family: 'JetBrains Mono', monospace; font-size: 14px; line-height: 1.6; }
+    .io-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px; }
+    @media(max-width:700px){ .io-row{grid-template-columns:1fr;} }
+    .io-block { border:1px solid var(--border); border-radius:14px; background:var(--surface); overflow:hidden; }
+    .io-block-label { padding:8px 14px; border-bottom:1px solid var(--border); font-size:11px; font-weight:800; letter-spacing:1px; color:var(--text3); text-transform:uppercase; background: rgba(0,0,0,0.02); }
+    .io-block textarea, .io-block pre { width:100%; min-height:100px; padding:12px 14px; background:transparent; border:none; outline:none; color:var(--text1); font-family:'JetBrains Mono',monospace; font-size:13px; resize:vertical; line-height:1.65; white-space:pre; overflow-x:auto; }
+    .io-block pre { color:var(--primary); white-space:pre-wrap; word-break:break-all; min-height:80px; max-height:180px; overflow-y:auto; }
+    .run-row { display:flex; gap:12px; margin-top:16px; }
+    .run-row button { flex:1; }
+    .results-area { margin-top:16px; max-height:220px; overflow-y:auto; }
+    .absence-bar { background:rgba(255,200,0,.08); border-bottom:1px solid rgba(255,200,0,.2); padding:10px 20px; font-size:13px; color:#ffc800; display:flex; align-items:center; gap:12px; position:sticky; top:56px; z-index:50; backdrop-filter: blur(8px); }
+    .abs-dot { width:10px; height:10px; border-radius:50%; background:#ffc800; animation:blink 1.5s infinite; }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: .2; } }
+  </style>
+</head>
+<body class="grid-bg">
+  <nav class="navbar" style="position:sticky;top:0;z-index:100">
+    <div class="logo"><a id="back-link" href="#" style="color:inherit;text-decoration:none">← Артқа</a></div>
+    <div id="nav-title" style="color:var(--text2);font-size:13px">Тапсырма</div>
+    <div class="nav-links">
+      
+      <span class="bits-badge" id="bits-badge">💎 —</span>
+      <button id="theme-toggle" class="settings-btn" style="font-size:16px;padding:4px 8px">🌙</button>
+    </div>
+  </nav>
+
+  <!-- Anticheat bar -->
+  <div class="ac-status-bar" id="ac-status-bar" style="display:none">🛡️ АнтиКопи белсенді &nbsp;|&nbsp; ⚠️ Ескертулер: 0/3</div>
+
+  <!-- Absence monitoring bar -->
+  <div class="absence-bar" id="absence-bar" style="display:none">
+    <div class="abs-dot"></div>
+    <span id="absence-text">Экраннан тыс уақыт: 0 сек</span>
+    <span style="color:var(--text3)">• 300 сек болса тапсырма жабылады</span>
+  </div>
+
+  <!-- Deadline bar -->
+  <div id="deadline-bar" style="display:none;text-align:center;padding:7px;font-size:13px;background:rgba(255,60,60,.08);border-bottom:1px solid rgba(255,60,60,.2)">
+    <span id="deadline-text" class="deadline-timer"></span>
+  </div>
+
+  <!-- Main layout -->
+  <div class="section" style="padding:0;max-width:100%;height:calc(100vh - 120px)">
+    <div class="solve-layout">
+
+      <!-- LEFT: Problem -->
+      <div class="solve-left" id="problem-left">
+        <div class="loader-spinner" style="margin:40px auto"></div>
+      </div>
+
+      <!-- RIGHT: Interactive UI (Depends on Assignment Type) -->
+      <div class="solve-right" id="solve-right-container">
+         <div class="loader-spinner" style="margin:40px auto" id="right-loader"></div>
+
+         <!-- 1: CODE UI -->
+         <div id="ui-code" style="display:none;height:100%;flex-direction:column">
+            <div class="autosave-label" id="autosave-label"></div>
+            <textarea class="code-editor-area" id="code-area" placeholder="# Python кодыңызды жазыңыз..." spellcheck="false"></textarea>
+            <div class="io-row">
+              <div class="io-block">
+                <div class="io-block-label">📥 Кіріс (Input)</div>
+                <textarea id="custom-input" placeholder="Кіріс деректерін осында жазыңыз"></textarea>
+              </div>
+              <div class="io-block">
+                <div class="io-block-label">📤 Шығыс (Output)</div>
+                <pre id="run-output" style="color:var(--primary)"></pre>
+              </div>
+            </div>
+            <div class="run-row">
+              <button class="btn btn-secondary" id="run-free-btn" onclick="runFree()">▶ Іске қосу</button>
+              <button class="btn btn-primary"   id="run-btn"      onclick="runTests()">🧪 Тексеру</button>
+              <button class="btn btn-secondary" id="submit-btn"   onclick="submitCode()" disabled>✅ Жіберу</button>
+            </div>
+            <div class="results-area" id="results"></div>
+         </div>
+
+         <!-- 2: QUIZ UI -->
+         <div id="ui-quiz" style="display:none;padding:30px 48px">
+            <h3 style="margin-bottom:24px;color:var(--primary);font-size:28px;font-weight:800;letter-spacing:-1px">❓ Тест (Quiz)</h3>
+            <div id="quiz-options"></div>
+            <button class="btn btn-primary" style="margin-top:30px;width:100%;padding:16px;font-size:16px;font-weight:800" onclick="submitQuiz()">✅ Жіберу</button>
+         </div>
+
+         <!-- 3: SHORT ANSWER UI -->
+         <div id="ui-short" style="display:none;padding:30px 48px">
+            <h3 style="margin-bottom:24px;color:var(--primary);font-size:28px;font-weight:800;letter-spacing:-1px">📝 Қысқа жауап</h3>
+            <input type="text" id="short-answer-input" class="form-input" style="font-size:20px;padding:16px;border-radius:16px" placeholder="Жауапты жазыңыз...">
+            <button class="btn btn-primary" style="margin-top:30px;width:100%;padding:16px;font-size:16px;font-weight:800" onclick="submitShortAnswer()">✅ Жіберу</button>
+         </div>
+
+         <!-- 4: FILE UPLOAD UI -->
+         <div id="ui-upload" style="display:none;padding:30px 48px">
+            <h3 style="margin-bottom:24px;color:var(--primary);font-size:28px;font-weight:800;letter-spacing:-1px">📎 Файл жүктеу</h3>
+            <div class="card" style="border:2px dashed var(--primary);text-align:center;padding:60px;background:rgba(167, 139, 250, 0.05);border-radius:24px">
+               <div style="font-size:64px;margin-bottom:20px">📤</div>
+               <input type="file" id="file-upload-input" class="form-input" style="margin:0 auto;max-width:320px">
+               <p style="color:var(--text3);font-size:13px;margin-top:16px">Кез-келген пішімдегі файлды таңдаңыз</p>
+            </div>
+            <button class="btn btn-primary" style="margin-top:30px;width:100%;padding:16px;font-size:16px;font-weight:800" onclick="submitFileUpload()">✅ Жүктеу және жіберу</button>
+         </div>
+
+         <!-- 5: ESSAY UI -->
+         <div id="ui-essay" style="display:none;padding:30px 48px">
+            <h3 style="margin-bottom:24px;color:var(--primary);font-size:28px;font-weight:800;letter-spacing:-1px">📝 Мәтін (Эссе жазу)</h3>
+            <textarea id="essay-answer-input" class="form-input" style="width:100%;height:350px;font-size:16px;padding:20px;resize:vertical;border-radius:16px" placeholder="Жауабыңызды осында жазыңыз..."></textarea>
+            <button class="btn btn-primary" style="margin-top:30px;width:100%;padding:16px;font-size:16px;font-weight:800" onclick="submitEssay()">✅ Жіберу</button>
+         </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script src="https://skulpt.org/js/skulpt.min.js"></script>
+  <script src="https://skulpt.org/js/skulpt-stdlib.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/bits.js"></script>
+  <script src="js/settings.js"></script>
+  <script src="js/anticheat.js"></script>
+  <script>
+    Settings.init();
+    function showToast(msg,type){var c={success:'#10B981',error:'#EF4444',warn:'#FFC800',info:'#A78BFA'};var t=document.createElement('div');t.style.cssText='position:fixed;top:20px;right:20px;z-index:99999;background:'+(c[type]||c.info)+';color:#FFFFFF;padding:14px 24px;border-radius:14px;font-weight:700;font-family:inherit;max-width:360px;animation:slideIn .4s cubic-bezier(0.16, 1, 0.3, 1);box-shadow:0 10px 30px rgba(0,0,0,0.2)';t.textContent=msg;document.body.appendChild(t);setTimeout(function(){t.remove()},3500);}
+
+    if (!Auth.requireStudent()) {}
+    var user = Auth.getCurrentUser();
+    var params = new URLSearchParams(location.search);
+    var assignmentId = params.get('assignmentId');
+    var courseId = params.get('courseId');
+    if (!assignmentId) { window.location.href = 'student-dashboard.html'; }
+    document.getElementById('back-link').href = '/student-course.html?courseId=' + courseId;
+
+    var assignment = null;
+    var lastTestResults = null;
+    var autosaveKey = 'autosave_' + user.id + '_' + assignmentId;
+    var startTimeKey = 'start_time_' + user.id + '_' + assignmentId;
+    var deadlineTimer = null;
+
+    // ── Absence Monitoring ─────────────────────────────
+    var absenceStart = null, absenceTotal = 0, absenceTimer = null;
+    var ABSENCE_LIMIT = 300, taskStarted = false;
+    document.addEventListener('visibilitychange', function() {
+      if (document.hidden) {
+        absenceStart = Date.now();
+        if (!taskStarted) return;
+        document.getElementById('absence-bar').style.display = 'flex';
+        absenceTimer = setInterval(function() {
+          absenceTotal = Math.floor((Date.now() - absenceStart) / 1000);
+          document.getElementById('absence-text').textContent = 'Экраннан тыс уақыт: ' + absenceTotal + ' сек';
+          if (absenceTotal >= ABSENCE_LIMIT) {
+            clearInterval(absenceTimer);
+            disableAllInputs();
+            document.getElementById('absence-bar').style.background = 'rgba(255,60,60,.15)';
+            document.getElementById('absence-text').textContent = '🔒 Тапсырма жабылды! 5 минуттан артық болдыңыз.';
+            showToast('Тапсырма жабылды', 'error');
+          }
+        }, 1000);
+      } else {
+        if (absenceStart) { absenceStart = null; clearInterval(absenceTimer); }
+        if (absenceTotal < ABSENCE_LIMIT) document.getElementById('absence-bar').style.display = 'none';
+      }
+    });
+
+    function disableAllInputs() {
+      var els = ['code-area','run-btn','submit-btn','short-answer-input','file-upload-input','essay-answer-input'];
+      els.forEach(function(i){ var el=document.getElementById(i); if(el) el.disabled=true; });
+    }
+
+    // ── Load assignment ────────────────────────────────
+    loadAssignment();
+
+    async function loadAssignment() {
+      try {
+        assignment = await API.assignments.getOne(assignmentId);
+        taskStarted = true;
+        document.getElementById('nav-title').textContent = assignment.title;
+        document.title = '📝 ' + assignment.title;
+
+        // Times and Deadlines
+        var endTime = null;
+        if (assignment.deadline) {
+          endTime = new Date(assignment.deadline).getTime();
+        }
+        
+        if (assignment.time_limit) {
+          var savedStart = localStorage.getItem(startTimeKey);
+          if (!savedStart) {
+            savedStart = Date.now();
+            localStorage.setItem(startTimeKey, savedStart);
+          } else {
+            savedStart = parseInt(savedStart, 10);
+          }
+          var limitEndTime = savedStart + (assignment.time_limit * 60000);
+          // Take the earliest of deadline or time_limit
+          if (!endTime || limitEndTime < endTime) {
+            endTime = limitEndTime;
+          }
+        }
+
+        if (endTime) {
+          document.getElementById('deadline-bar').style.display = 'block';
+          deadlineTimer = setInterval(function() {
+            var now = Date.now();
+            var diff = endTime - now;
+            if (diff <= 0) {
+              clearInterval(deadlineTimer);
+              document.getElementById('deadline-text').textContent = '🔒 Уақыт бітті / Мерзімі өтті!';
+              disableAllInputs();
+              
+              // Auto-submit if it's code and there's 100% or partial
+              if (lastTestResults && assignment.assignment_type === 'code') {
+                 submitCode();
+              } else if (assignment.assignment_type !== 'code') {
+                 showToast('Тапсырма уақыты бітті, енді жауап жібере алмайсыз.', 'error');
+              }
+              return;
+            }
+            var d=Math.floor(diff/86400000),h=Math.floor((diff%86400000)/3600000),m=Math.floor((diff%3600000)/60000),s=Math.floor((diff%60000)/1000);
+            var str = '⏰ Қалған уақыт: ';
+            if(d>0) str += d + ' күн ';
+            if(h>0||d>0) str += h + ' сағ ';
+            str += m + ' мин ' + s + ' сек';
+            document.getElementById('deadline-text').textContent = str;
+          }, 1000);
+        }
+
+        // Build left panel text
+        var html = '<h2 style="margin-bottom:14px;font-size:18px">' + assignment.title + '</h2>';
+        if (assignment.text_explanation) html += '<div style="color:var(--text2);line-height:1.8;margin-bottom:16px;white-space:pre-wrap">' + escHtml(assignment.text_explanation) + '</div>';
+        if (assignment.visual_explanation) {
+          var isURL = /^https?:\/\//.test(assignment.visual_explanation);
+          if (isURL) html += '<img src="' + assignment.visual_explanation + '" style="max-width:100%;border-radius:8px;margin-bottom:12px">';
+          else html += '<pre style="background:var(--surface);padding:12px;border-radius:8px;font-size:12px;margin-bottom:12px;overflow-x:auto">' + assignment.visual_explanation + '</pre>';
+        }
+        
+        var tc = assignment.test_cases || [];
+
+        // Build Right Panel based on Type
+        document.getElementById('right-loader').style.display = 'none';
+        var type = assignment.assignment_type || 'code';
+        if (type === 'code') {
+          if (assignment.input_format)  html += '<h4 style="color:var(--primary);margin-bottom:4px">📥 Кіріс форматы:</h4><p style="color:var(--text2);font-size:13px;margin-bottom:12px">' + assignment.input_format + '</p>';
+          if (assignment.output_format) html += '<h4 style="color:var(--primary);margin-bottom:4px">📤 Шығыс форматы:</h4><p style="color:var(--text2);font-size:13px;margin-bottom:12px">' + assignment.output_format + '</p>';
+          if (tc.length) {
+            html += '<h4 style="color:var(--primary);margin-top:16px;margin-bottom:8px">🧪 Мысалдар:</h4>';
+            tc.slice(0,3).forEach(function(t) {
+              html += '<div style="display:flex;gap:10px;margin-bottom:8px">' +
+                '<div style="flex:1"><div style="font-size:10px;color:var(--text3);margin-bottom:3px">КІРІС</div><pre style="background:var(--surface);padding:8px;border-radius:6px;font-size:11px;overflow-x:auto;white-space:pre-wrap">' + escHtml(t.input||'') + '</pre></div>' +
+                '<div style="flex:1"><div style="font-size:10px;color:var(--text3);margin-bottom:3px">ШЫҒЫС</div><pre style="background:var(--surface);padding:8px;border-radius:6px;font-size:11px;overflow-x:auto;white-space:pre-wrap;color:var(--primary)">' + escHtml(t.expected_output||'') + '</pre></div>' +
+                '</div>';
+            });
+          }
+          document.getElementById('ui-code').style.display='flex';
+          document.getElementById('ac-status-bar').style.display='block';
+          Auth.updateNavbar && Auth.updateNavbar();
+          AnticheatSystem && AnticheatSystem.init(user.id, assignmentId);
+          var saved = localStorage.getItem(autosaveKey);
+          if (saved) { document.getElementById('code-area').value = saved; document.getElementById('autosave-label').textContent = '💾 Автосақталған код жүктелді'; }
+          
+        } else if (type === 'quiz') {
+          document.getElementById('ui-quiz').style.display='block';
+          var opts = (tc[0] && tc[0].options) ? tc[0].options : [];
+          var qHtml = '';
+          opts.forEach(function(o) {
+            qHtml += '<div class="card" style="margin-bottom:12px;cursor:pointer"><label style="display:flex;align-items:center;cursor:pointer;width:100%"><input type="radio" name="quiz_opt" value="'+escHtml(o)+'" style="margin-right:12px;transform:scale(1.2)"> <span style="font-size:16px">'+escHtml(o)+'</span></label></div>';
+          });
+          document.getElementById('quiz-options').innerHTML = qHtml;
+
+        } else if (type === 'short_answer') {
+          document.getElementById('ui-short').style.display='block';
+        } else if (type === 'file_upload') {
+          document.getElementById('ui-upload').style.display='block';
+        } else if (type === 'text_essay') {
+          document.getElementById('ui-essay').style.display='block';
+        }
+
+        // Hints
+        html += '<div style="margin-top:20px;padding-top:14px;border-top:1px solid var(--border)"><h4 style="margin-bottom:8px">💡 Кеңестер</h4>';
+        if (assignment.hint_small) html += '<button class="btn-hint" id="hint-small-btn" onclick="buyHint(\'small\',5)">🔍 Кішкене кеңес — 5 💎</button><div id="hint-small-content"></div>';
+        if (assignment.hint_big)   html += '<button class="btn-hint" id="hint-big-btn" onclick="buyHint(\'big\',15)">💡 Үлкен кеңес — 15 💎</button><div id="hint-big-content"></div>';
+        html += '</div>';
+
+        document.getElementById('problem-left').innerHTML = html;
+
+        checkHints();
+      } catch(e) { showToast('Тапсырма жүктелмеді: ' + e.message, 'error'); }
+    }
+
+    function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    // ── Submit Helpers ────────────────────────────────────────
+    async function submitQuiz() {
+       var sel = document.querySelector('input[name="quiz_opt"]:checked');
+       if(!sel){ showToast('Жауап нұсқасын таңдаңыз!', 'warn'); return; }
+       var want = assignment.test_cases[0].answer;
+       var score = (sel.value === want) ? 100 : 0;
+       try {
+         await API.submissions.create({ assignment_id: assignmentId, course_id: courseId, code: "Студент жауабы: " + sel.value, score: score, passed_tests: score?1:0, total_tests: 1 });
+         showToast(score===100?'Дұрыс! 100%':'Қате! 0%', score===100?'success':'error');
+       } catch(e) { showToast(e.message, 'error'); }
+    }
+
+    async function submitEssay() {
+       var ans = document.getElementById('essay-answer-input').value.trim();
+       if(!ans) { showToast('Жауапты жазыңыз!', 'warn'); return; }
+       try {
+         await API.submissions.create({ assignment_id: assignmentId, course_id: courseId, code: ans, score: 0, passed_tests: 0, total_tests: 1 });
+         showToast('Жіберілді. Мұғалім тексереді.', 'success');
+         document.getElementById('essay-answer-input').disabled = true;
+       } catch(e) { showToast(e.message, 'error'); }
+    }
+
+    async function submitShortAnswer() {
+       var val = document.getElementById('short-answer-input').value.trim();
+       if(!val){ showToast('Жауапты жазыңыз!', 'warn'); return; }
+       var want = (assignment.test_cases[0] && assignment.test_cases[0].answer) ? assignment.test_cases[0].answer.trim() : '';
+       var score = (val.toLowerCase() === want.toLowerCase()) ? 100 : 0; // Simple case-insensitive compare for short answers
+       try {
+         await API.submissions.create({ assignment_id: assignmentId, course_id: courseId, code: "Студент жауабы: " + val, score: score, passed_tests: score?1:0, total_tests: 1 });
+         showToast(score===100?'Дұрыс! 100%':'Қате! 0%', score===100?'success':'error');
+       } catch(e){ showToast(e.message,'error'); }
+    }
+
+    async function submitFileUpload() {
+       var f = document.getElementById('file-upload-input').files[0];
+       if(!f){ showToast('Файл таңдаңыз!', 'warn'); return; }
+       try {
+         // Placeholder for actual file upload tracking. Assign 100% score outright.
+         await API.submissions.create({ assignment_id: assignmentId, course_id: courseId, code: "Жүктелген файл: " + f.name, score: 100, passed_tests: 1, total_tests: 1 });
+         showToast('Файл жүктелді! 100%', 'success');
+       } catch(e){ showToast(e.message,'error'); }
+    }
+
+    // ── Code Runner Logic ─────────────────────────────────
+    setInterval(function(){
+      var c = document.getElementById('code-area').value;
+      if (c.trim()) {
+        localStorage.setItem(autosaveKey, c);
+        var t = new Date();
+        document.getElementById('autosave-label').textContent = '💾 ' + t.getHours().toString().padStart(2,'0') + ':' + t.getMinutes().toString().padStart(2,'0') + ':' + t.getSeconds().toString().padStart(2,'0');
+      }
+    }, 3000);
+
+    document.getElementById('code-area').addEventListener('keydown', function(e) {
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        var start = this.selectionStart, end = this.selectionEnd;
+        var val = this.value;
+        if (e.shiftKey) {
+          var lineStart = val.lastIndexOf('\n', start-1) + 1;
+          var spaces = val.slice(lineStart).match(/^ {1,4}/);
+          if (spaces) {
+            this.value = val.slice(0, lineStart) + val.slice(lineStart + spaces[0].length);
+            this.selectionStart = this.selectionEnd = start - spaces[0].length;
+          }
+        } else {
+          this.value = val.substring(0, start) + '    ' + val.substring(end);
+          this.selectionStart = this.selectionEnd = start + 4;
+        }
+      }
+      if (e.key === 'Enter') {
+        var start = this.selectionStart;
+        var textBefore = this.value.substring(0, start);
+        var lastLine = textBefore.split('\n').pop();
+        var match = lastLine.match(/^(\s*)/);
+        var indent = match ? match[1] : '';
+        if (lastLine.trimEnd().endsWith(':')) indent += '    ';
+        setTimeout(function() {
+          var pos = document.getElementById('code-area').selectionStart;
+          var v = document.getElementById('code-area').value;
+          document.getElementById('code-area').value = v.substring(0, pos) + indent + v.substring(pos);
+          document.getElementById('code-area').selectionStart = document.getElementById('code-area').selectionEnd = pos + indent.length;
+        }, 0);
+      }
+    });
+
+    function runPython(code, inputLines) {
+      return new Promise(function(resolve) {
+        var output = ''; var lines = (inputLines||[]).slice();
+        try {
+          Sk.configure({
+            output: function(t){ output += t; },
+            read: function(x){ throw new Error('Файл жоқ: '+x); },
+            inputfun: function(){ return Promise.resolve(lines.length ? lines.shift() : ''); },
+            inputfunTakesPromise: true,
+            __future__: Sk.python3,
+            execLimit: 10000
+          });
+          Sk.misceval.asyncToPromise(function(){ return Sk.importMainWithBody('<stdin>',false,code,true); })
+            .then(function(){ resolve({ output: output.trimEnd(), error: null }); })
+            .catch(function(e){ resolve({ output:'', error: String(e) }); });
+        } catch(e){ resolve({ output:'', error: String(e) }); }
+      });
+    }
+
+    async function runFree() {
+      var code = document.getElementById('code-area').value;
+      if (!code.trim()){ showToast('Код жазыңыз','warn'); return; }
+      var inputRaw = document.getElementById('custom-input').value;
+      var inputLines = inputRaw.split('\n');
+      document.getElementById('run-output').textContent = '⏳...';
+      document.getElementById('run-free-btn').disabled = true;
+      var r = await runPython(code, inputLines);
+      document.getElementById('run-output').textContent = r.error ? '❌ ' + r.error : (r.output || '(бос)');
+      document.getElementById('run-output').style.color = r.error ? 'var(--danger)' : 'var(--primary)';
+      document.getElementById('run-free-btn').disabled = false;
+    }
+
+    async function runTests() {
+      if (!assignment) return;
+      var code = document.getElementById('code-area').value;
+      if (!code.trim()){ showToast('Код жазыңыз','warn'); return; }
+      var btn = document.getElementById('run-btn'); btn.disabled=true; btn.textContent='⏳...';
+      document.getElementById('results').innerHTML = '<div class="loader-spinner" style="margin:16px auto;width:32px;height:32px"></div>';
+
+      var tests = assignment.test_cases || [];
+      if (!tests.length) { showToast('Тест жоқ — Іске қосу батырмасын пайдаланыңыз','info'); btn.disabled=false; btn.textContent='🧪 Тексеру'; return; }
+
+      var results = []; var passed = 0;
+      for (var i=0; i<tests.length; i++) {
+        var tc = tests[i];
+        var inputLines = (tc.input||'').split('\n');
+        var expected = (tc.expected_output||'').trim();
+        var r = await runPython(code, inputLines);
+        var got = (r.output||'').trim();
+        var ok = !r.error && got===expected;
+        if (ok) passed++;
+        results.push({ n:i+1, ok, input:tc.input||'', expected, got: r.error||got });
+      }
+      lastTestResults = { score: Math.round(passed/tests.length*100), passed, total: tests.length };
+
+      var html = '<table class="data-table" style="font-size:12px"><tr><th>#</th><th>Кіріс</th><th>Күтілген</th><th>Нәтиже</th><th>✓</th></tr>';
+      results.forEach(function(r) {
+        html += '<tr class="test-result-row"><td>'+r.n+'</td>' +
+          '<td style="max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + escHtml((r.input||'').split('\n')[0]) + '</td>' +
+          '<td style="white-space:pre-wrap;max-width:80px">' + escHtml(r.expected) + '</td>' +
+          '<td style="white-space:pre-wrap;max-width:80px;color:'+(r.ok?'var(--primary)':'var(--danger)')+'">' + escHtml(r.got) + '</td>' +
+          '<td class="' + (r.ok?'test-pass':'test-fail') + '">' + (r.ok?'✅':'❌') + '</td></tr>';
+      });
+      html += '</table>';
+      var sc = lastTestResults.score>=100?'score-100':lastTestResults.score>=50?'score-mid':'score-low';
+      html += '<div style="text-align:center;margin-top:8px"><span class="score-badge '+sc+'">'+lastTestResults.passed+'/'+lastTestResults.total+' — '+lastTestResults.score+'%</span></div>';
+      document.getElementById('results').innerHTML = html;
+      document.getElementById('submit-btn').disabled = false;
+      btn.disabled=false; btn.textContent='🧪 Тексеру';
+    }
+
+    async function submitCode() {
+      if (!lastTestResults||!assignment) return;
+      var btn=document.getElementById('submit-btn'); btn.disabled=true; btn.textContent='⏳...';
+      try {
+        await API.submissions.create({
+          assignment_id: assignmentId,
+          course_id: courseId,
+          code: document.getElementById('code-area').value,
+          score: lastTestResults.score,
+          passed_tests: lastTestResults.passed,
+          total_tests: lastTestResults.total
+        });
+        if (lastTestResults.score===100) {
+          try { await BitsSystem.earn(user.id, 20, 'Тапсырма 100%'); } catch(e){}
+          showToast('🎉 Тамаша! 100% — +20 💎 алдыңыз!', 'success');
+        } else {
+          showToast('Жіберілді! Балл: '+lastTestResults.score+'%', 'success');
+        }
+        localStorage.removeItem(autosaveKey);
+      } catch(e){ showToast(e.message,'error'); }
+      btn.disabled=false; btn.textContent='✅ Жіберу';
+    }
+
+    // ── Hints ─────────────────────────────────────────
+    async function checkHints() {
+      try {
+        if (assignment.hint_small) {
+          var s = await BitsSystem.isHintBought(user.id, assignmentId, 'small');
+          if (s) document.getElementById('hint-small-content').innerHTML = '<div class="hint-content">'+assignment.hint_small+'</div>';
+        }
+        if (assignment.hint_big) {
+          var b = await BitsSystem.isHintBought(user.id, assignmentId, 'big');
+          if (b) document.getElementById('hint-big-content').innerHTML = '<div class="hint-content">'+assignment.hint_big+'</div>';
+        }
+      } catch(e){}
+    }
+
+    async function buyHint(type, cost) {
+      var ok = await BitsSystem.buyHint(user.id, assignmentId, type, cost);
+      if (ok) {
+        var hint = type==='small'?assignment.hint_small:assignment.hint_big;
+        document.getElementById('hint-'+type+'-content').innerHTML = '<div class="hint-content">' + (hint||'Кеңес жоқ') + '</div>';
+        showToast('Кеңес сатып алынды!', 'success');
+      }
+    }
+  </script>
+</body>
+</html>

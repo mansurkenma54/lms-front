@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PyContest — Мұғалім панелі</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="grid-bg"></div>
+
+  <!-- LOGIN SCREEN -->
+  <div class="auth-wrapper" id="teacher-login-screen" style="display:none">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <div class="logo-icon">🧑‍🏫</div>
+        <div class="logo-text">
+          <span class="logo-title">PyContest</span>
+          <span class="logo-sub">Мұғалім Панелі</span>
+        </div>
+      </div>
+      <div class="auth-divider"></div>
+      <h2 class="auth-heading">Мұғалім кіруі</h2>
+      <div class="auth-error" id="teacher-error" style="display:none"></div>
+      <div class="form-group" style="margin-top:16px">
+        <label class="form-label">Логин</label>
+        <input type="text" id="t-username" class="form-input" placeholder="teacher1"
+          onkeydown="if(event.key==='Enter')document.getElementById('t-password').focus()"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Пароль</label>
+        <input type="password" id="t-password" class="form-input" placeholder="●●●●●●"
+          onkeydown="if(event.key==='Enter')doTeacherLogin()"/>
+      </div>
+      <button class="btn btn-primary btn-full" id="t-login-btn" onclick="doTeacherLogin()">▶ Кіру</button>
+      <div class="auth-footer"><a href="index.html">← Басты бетке</a></div>
+    </div>
+  </div>
+
+  <!-- MAIN DASHBOARD -->
+  <div id="teacher-main" style="display:none">
+    <nav class="contest-nav">
+      <div class="nav-left">
+        <div class="nav-logo">🧑‍🏫 <span>Мұғалім</span></div>
+        <div class="nav-name" id="teacher-name" style="font-size:14px;font-weight:700"></div>
+      </div>
+      <div class="nav-right">
+        <button class="theme-btn" id="theme-btn" onclick="toggleTheme()">🌙</button>
+        <button class="btn btn-sm btn-ghost" onclick="teacherLogout()">🚪 Шығу</button>
+      </div>
+    </nav>
+
+    <div class="dashboard-wrapper">
+
+      <!-- TABS -->
+      <div class="teacher-tabs">
+        <button class="teacher-tab" id="tab-pending" onclick="switchTab('pending')">
+          ⏳ Күту тізімі
+          <span id="pending-badge" class="count-chip" style="margin-left:4px;display:none"></span>
+        </button>
+        <button class="teacher-tab" id="tab-students" onclick="switchTab('students')">👥 Студенттер</button>
+        <button class="teacher-tab" id="tab-trophies" onclick="switchTab('trophies')">🏆 Кубоктар</button>
+        <button class="teacher-tab" id="tab-messages" onclick="switchTab('messages')">💬 Хабарлар</button>
+        <button class="teacher-tab" id="tab-timer" onclick="switchTab('timer')">⏱️ Уақыт</button>
+        <button class="teacher-tab" id="tab-code" onclick="switchTab('code');loadCourseCode()">🔑 Курс коды</button>
+      </div>
+
+      <!-- ─── PENDING PANEL ─── -->
+      <div class="teacher-panel" id="panel-pending" style="display:none">
+        <div class="section-header">
+          <span class="section-title">⏳ Тіркелу күтіп жатқан оқушылар</span>
+          <button class="btn btn-sm btn-ghost" onclick="loadPendingStudents()">🔄 Жаңарту</button>
+        </div>
+        <div class="table-wrapper">
+          <table class="students-table">
+            <thead><tr>
+              <th>Аты-жөні</th><th>Логин</th><th>Тіркелген</th><th>Әрекет</th>
+            </tr></thead>
+            <tbody id="pending-tbody"><tr><td colspan="4" style="text-align:center;color:var(--text3);padding:30px">Жүктелуде...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ─── STUDENTS PANEL ─── -->
+      <div class="teacher-panel" id="panel-students" style="display:none">
+        <div class="section-header">
+          <span class="section-title">👥 Студенттер тізімі</span>
+          <button class="btn btn-sm btn-ghost" onclick="loadStudentsTable()">🔄 Жаңарту</button>
+        </div>
+        <div class="table-wrapper">
+          <table class="students-table" style="min-width:900px">
+            <thead><tr>
+              <th>Аты-жөні</th><th>Логин</th><th>Бал</th><th>Шешілді</th>
+              <th>💎 Бит</th><th>Соңғы кіру</th><th>Соңғы тапсырма</th>
+              <th>Ескертулер</th><th>Статус</th><th style="width:180px">Әрекет</th>
+            </tr></thead>
+            <tbody id="students-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ─── TROPHIES PANEL ─── -->
+      <div class="teacher-panel" id="panel-trophies" style="display:none">
+        <div class="section-header">
+          <span class="section-title">🏆 Кубок беру</span>
+        </div>
+        <p style="font-size:13px;color:var(--text3);margin-bottom:16px">Студент жолының «🏆» батырмасын басып кубок беруге болады.</p>
+        <div class="table-wrapper">
+          <table class="students-table">
+            <thead><tr>
+              <th>Аты-жөні</th><th>Бал</th><th>Шешілді</th><th>Кубоктар</th><th>Беру</th>
+            </tr></thead>
+            <tbody id="trophies-tbody">
+              <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                  var tbody = document.getElementById('trophies-tbody');
+                  function refreshTrophies() {
+                    var all = getAllStudents ? getAllStudents() : [];
+                    tbody.innerHTML = all.map(function(s) {
+                      var badges = (s.badges||[]).map(function(b){
+                        return '<span class="trophy-'+b.type+'" title="'+escHtml(b.reason)+'" style="margin-right:2px">'+(b.type==='silver'?'🥈':b.type==='gold'?'🥇':'💎')+'</span>';
+                      }).join('');
+                      return '<tr><td>'+escHtml(s.displayName||s.username)+'</td><td>'+(s.score||0)+'</td><td>'+(s.solved?s.solved.length:0)+'</td><td>'+(badges||'—')+'</td>' +
+                        '<td><button class="btn btn-sm btn-gold" onclick="openTrophyModal(\''+s.username+'\')">🏆 Беру</button></td></tr>';
+                    }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:30px">Студент жоқ</td></tr>';
+                  }
+                  setInterval(refreshTrophies, 3000); refreshTrophies();
+                });
+              </script>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ─── MESSAGES PANEL ─── -->
+      <div class="teacher-panel" id="panel-messages" style="display:none">
+        <div class="section-header">
+          <span class="section-title">💬 Студентке хабар жіберу</span>
+        </div>
+        <div class="card" style="max-width:480px">
+          <div class="form-group">
+            <label class="form-label">Студент</label>
+            <select id="msg-student-select" class="form-select">
+              <option value="">Студент таңдаңыз...</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Хабар</label>
+            <textarea id="msg-text-direct" class="form-textarea" placeholder="Хабарыңызды жазыңыз..." rows="4"></textarea>
+          </div>
+          <button class="btn btn-primary btn-full" onclick="sendDirectMessage()">📨 Жіберу</button>
+        </div>
+      </div>
+
+      <!-- ─── TIMER PANEL ─── -->
+      <div class="teacher-panel" id="panel-timer" style="display:none">
+        <div class="section-header">
+          <span class="section-title">⏱️ Оқушы уақыт статистикасы</span>
+          <button class="btn btn-sm btn-ghost" onclick="loadTimerData()">🔄</button>
+        </div>
+        <div class="table-wrapper">
+          <table class="students-table">
+            <thead><tr>
+              <th>Оқушы</th><th>Тапсырма</th><th>Жіберген уақыт</th>
+              <th>Кеткен уақыт</th><th>Ескерту?</th><th>Нәтиже</th>
+            </tr></thead>
+            <tbody id="timer-tbody"><tr><td colspan="6" style="text-align:center;color:var(--text3);padding:30px">Жүктелуде...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ─── COURSE CODE PANEL ─── -->
+      <div class="teacher-panel" id="panel-code" style="display:none">
+        <div class="section-header">
+          <span class="section-title">🔑 Курс тіркелу коды</span>
+        </div>
+        <div class="card" style="max-width:400px">
+          <div style="text-align:center;font-size:36px;font-family:var(--font-heading);color:var(--accent);letter-spacing:8px;padding:16px;background:var(--bg3);border-radius:10px;margin-bottom:16px" id="current-code">—</div>
+          <div class="form-group">
+            <label class="form-label">Жаңа код</label>
+            <div style="display:flex;gap:8px">
+              <input type="text" id="new-code-input" class="form-input" placeholder="XXXXXX" style="text-transform:uppercase;letter-spacing:3px;font-family:var(--font-heading)"/>
+              <button class="btn btn-secondary" onclick="generateCode()" title="Автоматты генерация">🎲</button>
+            </div>
+          </div>
+          <button class="btn btn-primary btn-full" onclick="saveCourseCode()">💾 Сақтау</button>
+          <p style="font-size:11px;color:var(--text3);margin-top:10px">
+            Бұл кодты оқушыларға беріңіз — тіркелу кезінде осы кодты енгізеді.
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MODALS -->
+  <!-- Trophy Modal -->
+  <div class="modal-overlay" id="trophy-modal">
+    <div class="modal-box">
+      <div class="modal-icon">🏆</div>
+      <h3 class="modal-title">Кубок беру</h3>
+      <p class="modal-desc" style="margin-bottom:16px">Студент: <strong id="trophy-student-name"></strong></p>
+      <div class="trophy-option" data-trophy="silver" onclick="selectTrophy('silver')">
+        <span style="font-size:28px">🥈</span>
+        <div><div style="font-weight:700">Күміс кубок</div><div style="font-size:12px;color:var(--text3)">Жақсы нәтиже</div></div>
+      </div>
+      <div class="trophy-option" data-trophy="gold" onclick="selectTrophy('gold')">
+        <span style="font-size:28px">🥇</span>
+        <div><div style="font-weight:700">Алтын кубок</div><div style="font-size:12px;color:var(--text3)">Тамаша нәтиже</div></div>
+      </div>
+      <div class="trophy-option" data-trophy="diamond" onclick="selectTrophy('diamond')">
+        <span style="font-size:28px">💎</span>
+        <div><div style="font-weight:700">Алмаз кубок</div><div style="font-size:12px;color:var(--text3)">Ерекше жетістік</div></div>
+      </div>
+      <div class="form-group" style="margin-top:14px">
+        <label class="form-label">Себеп / комментарий</label>
+        <textarea id="trophy-reason" class="form-textarea" placeholder="Неліктен осы кубокты беріп отырсыз?"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeModal('trophy-modal')">Болдырмау</button>
+        <button class="btn btn-gold" onclick="giveTrophy()">🏆 Беру</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Message Modal -->
+  <div class="modal-overlay" id="msg-modal">
+    <div class="modal-box">
+      <div class="modal-icon">💬</div>
+      <h3 class="modal-title">Хабар жіберу</h3>
+      <p class="modal-desc" style="margin-bottom:14px">Студент: <strong id="msg-student-name"></strong></p>
+      <div class="form-group">
+        <textarea id="msg-text" class="form-textarea" placeholder="Хабарыңызды жазыңыз..." rows="4"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeModal('msg-modal')">Болдырмау</button>
+        <button class="btn btn-primary" onclick="sendMessage()">📨 Жіберу</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container" class="toast-container"></div>
+
+  <script src="js/data.js"></script>
+  <script src="js/teacher-auth.js"></script>
+  <script src="js/teacher.js"></script>
+  <script>
+    // Direct message (from messages panel select)
+    function sendDirectMessage() {
+      var sel = document.getElementById('msg-student-select');
+      var u = sel ? sel.value : '';
+      var text = (document.getElementById('msg-text-direct') || {}).value || '';
+      if (!u) { showToast('Студент таңдаңыз', 'warn'); return; }
+      if (!text.trim()) { showToast('Хабар жазыңыз', 'warn'); return; }
+      var msgs = [];
+      try { msgs = JSON.parse(localStorage.getItem('messages_' + u) || '[]'); } catch(e){}
+      msgs.push({ from: (currentTeacher && (currentTeacher.displayName || currentTeacher.username)) || 'Мұғалім', text: text.trim(), at: new Date().toISOString(), read: false });
+      localStorage.setItem('messages_' + u, JSON.stringify(msgs));
+      document.getElementById('msg-text-direct').value = '';
+      showToast('💬 Хабар жіберілді!', 'success');
+    }
+    // Update theme button initial text
+    document.addEventListener('DOMContentLoaded', function() {
+      var t = localStorage.getItem('pycontest_theme') || 'dark';
+      var btn = document.getElementById('theme-btn');
+      if (btn) btn.textContent = t==='dark'?'🌙':'☀️';
+    });
+  </script>
+</body>
+</html>

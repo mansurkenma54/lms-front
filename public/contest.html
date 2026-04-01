@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PyContest — Есептер</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="grid-bg"></div>
+
+  <!-- BAN SCREEN -->
+  <div class="ban-screen" id="ban-screen" style="display:none">
+    <div class="ban-icon">🚫</div>
+    <h2 class="ban-title">Аккаунт бандалды</h2>
+    <p class="ban-msg" id="ban-msg">Бандалды. Мұғалімге хабарласыңыз.</p>
+  </div>
+
+  <!-- NAV -->
+  <nav class="contest-nav">
+    <div class="nav-left">
+      <div class="nav-logo"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--primary);margin-right:4px;vertical-align:bottom;"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" x2="20" y1="19" y2="19"></line></svg> <span>PyContest</span></div>
+      <div class="nav-progress" id="nav-progress-wrap">
+        <span id="solved-count">0</span>/<span id="total-count">100</span>
+        <span style="color:var(--text3);margin-left:4px;font-size:12px">шешілді</span>
+        <div class="nav-progress-bar" style="margin-left:8px">
+          <div class="nav-progress-fill" id="progress-fill" style="width:0%"></div>
+        </div>
+      </div>
+    </div>
+    <div class="nav-right">
+      <span id="task-timer" style="display:none">00:00</span>
+      <div id="nav-warn-badge" class="nav-warn-badge" style="display:none">⚠️ <span id="nav-warn-count">0</span>/3</div>
+      <div class="nav-stat">
+        <span class="nav-stat-icon">💎</span>
+        <span id="nav-bits">100</span>
+        <span class="nav-stat-label">бит</span>
+      </div>
+      <div class="nav-stat">
+        <span class="nav-stat-icon">⭐</span>
+        <span id="nav-score">0</span>
+        <span class="nav-stat-label">бал</span>
+      </div>
+      <div class="nav-name" id="nav-name">—</div>
+      <a href="leaderboard.html" class="nav-link" target="_blank">🏆 Рейтинг</a>
+      <button class="theme-btn" onclick="toggleTheme()" id="theme-btn" title="Тема">🌙</button>
+      <button class="btn btn-sm btn-ghost" onclick="logout()">Шығу</button>
+    </div>
+  </nav>
+
+  <!-- MAIN LAYOUT -->
+  <div class="contest-layout">
+
+    <!-- SIDEBAR -->
+    <aside class="problems-panel" id="problems-panel">
+      <div class="panel-header">
+        <span class="panel-title">Есептер</span>
+        <button class="panel-toggle" id="panel-toggle" onclick="togglePanel()">◀</button>
+      </div>
+      <div style="padding:8px">
+        <select id="diff-filter" class="form-select" style="font-size:12px;padding:6px 10px;margin-bottom:6px"
+          onchange="renderProblemList()">
+          <option value="all">Барлығы</option>
+          <option value="easy">🟢 Жеңіл</option>
+          <option value="medium">🟡 Орташа</option>
+          <option value="hard">🔴 Қиын</option>
+        </select>
+      </div>
+      <div class="problems-list" id="problems-list"></div>
+    </aside>
+
+    <!-- PROBLEM BODY -->
+    <main class="problem-body" id="problem-body">
+
+      <!-- Problem Header -->
+      <div class="problem-header">
+        <div class="problem-title-row">
+          <h1 class="problem-title" id="problem-title">Есеп жүктелуде…</h1>
+          <span class="badge" id="problem-badge">—</span>
+        </div>
+        <div class="problem-pts-row">
+          <span class="problem-pts" id="problem-pts">—</span>
+          <span class="problem-attempts" id="problem-attempts-info"></span>
+        </div>
+      </div>
+
+      <!-- Answer banner -->
+      <div class="answer-banner" id="answer-banner" style="display:none">
+        <span>📖 Жауапты оқыдыңыз. Енді оны</span>
+        <strong>өз сөзіңізбен жазыңыз</strong>
+        <span>→ +10 бал</span>
+      </div>
+
+      <!-- Statement -->
+      <div class="problem-section">
+        <div class="section-label">📄 Есеп шарты</div>
+        <div class="problem-statement" id="problem-statement">—</div>
+      </div>
+
+      <div class="problem-io-grid">
+        <div class="problem-section">
+          <div class="section-label">📥 Кіріс форматы</div>
+          <div class="problem-statement small" id="input-format">—</div>
+        </div>
+        <div class="problem-section">
+          <div class="section-label">📤 Шығыс форматы</div>
+          <div class="problem-statement small" id="output-format">—</div>
+        </div>
+      </div>
+
+      <!-- Examples -->
+      <div class="problem-section">
+        <div class="section-label">💡 Мысалдар</div>
+        <div class="examples-grid" id="examples-grid"></div>
+      </div>
+
+      <!-- Hints -->
+      <div class="problem-section hints-section">
+        <div class="section-label">🎯 Кеңестер</div>
+        <div class="hints-buttons">
+          <button class="btn btn-hint hint-small" id="hint-btn-1" onclick="buyHint('small')">🔍 Кішкене — 5 💎</button>
+          <button class="btn btn-hint hint-big"   id="hint-btn-2" onclick="buyHint('big')">💡 Үлкен — 15 💎</button>
+          <button class="btn btn-hint hint-answer" id="hint-btn-3" onclick="buyHint('answer')">👁️ Жауап — 40 💎</button>
+        </div>
+        <div class="hints-shown" id="hints-shown"></div>
+      </div>
+
+      <!-- Code Editor -->
+      <div class="problem-section editor-section">
+        <div class="section-label">💻 Код редактор (Python)</div>
+        <div id="compiler-status"></div>
+        <div class="editor-wrapper">
+          <textarea id="code-area" class="code-editor" spellcheck="false"
+            placeholder="# Python кодыңызды осында жазыңыз&#10;n = int(input())&#10;print(n * 2)"></textarea>
+        </div>
+        <div class="editor-io">
+          <div class="io-group">
+            <label class="form-label">📥 Custom Input</label>
+            <textarea id="custom-input" class="io-textarea" placeholder="Кіріс деректерін жазыңыз..."></textarea>
+          </div>
+          <div class="io-group">
+            <label class="form-label">📤 Күтілетін шығыс</label>
+            <textarea id="expected-output" class="io-textarea" placeholder="Шығысты жазыңыз..."></textarea>
+          </div>
+        </div>
+        <div class="editor-actions" style="gap:8px">
+          <button class="btn btn-secondary" id="run-btn" onclick="runCode()">▶ Іске қосу</button>
+          <button class="btn btn-primary"   id="submit-btn" onclick="submitCode()">↑ Жіберу</button>
+          <button class="btn btn-ghost btn-sm" onclick="clearCode()">🗑️ Тазалау</button>
+        </div>
+        <div class="run-output" id="run-output" style="display:none">
+          <div class="section-label">📋 Нәтиже</div>
+          <pre class="run-result" id="run-result"></pre>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ─── MODALS ─── -->
+  <div class="modal-overlay" id="confirm-modal">
+    <div class="modal-box">
+      <div class="modal-icon">❓</div>
+      <h3 class="modal-title" id="confirm-title">Растау</h3>
+      <p class="modal-msg" id="confirm-msg"></p>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeModal('confirm-modal')">Болдырмау</button>
+        <button class="btn btn-primary" id="confirm-ok">Иә</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="answer-modal">
+    <div class="modal-box modal-wide">
+      <div class="modal-icon">👁️</div>
+      <h3 class="modal-title">Есептің шешімі</h3>
+      <p class="modal-desc" style="color:var(--warn);margin-bottom:12px">⚠️ Жауапты жаттап алыңыз — содан кейін өз сөзіңізбен жазасыз</p>
+      <div class="answer-code-wrapper">
+        <pre class="answer-code" id="answer-code"></pre>
+      </div>
+      <div class="modal-actions" style="margin-top:20px">
+        <button class="btn btn-primary" onclick="closeAnswerModal()">Түсіндім, жабу ✓</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="ac-modal">
+    <div class="modal-box">
+      <div class="modal-icon success-icon">✅</div>
+      <h3 class="modal-title" style="color:var(--accent)">Accepted!</h3>
+      <div class="ac-pts-display">
+        <span class="ac-pts-big" id="ac-pts">+0</span>
+        <span class="ac-pts-label">бал</span>
+      </div>
+      <p class="modal-msg" id="ac-msg">Тамаша! Есеп дұрыс шешілді!</p>
+      <div class="ac-total">Жалпы бал: <strong id="ac-total">0</strong></div>
+      <div class="modal-actions">
+        <button class="btn btn-primary" onclick="nextProblem()">Келесі есеп →</button>
+        <button class="btn btn-ghost" onclick="closeModal('ac-modal')">Жабу</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="wa-modal">
+    <div class="modal-box">
+      <div class="modal-icon">❌</div>
+      <h3 class="modal-title" style="color:var(--error)">Wrong Answer</h3>
+      <p class="modal-msg">Шығыс дұрыс емес. <strong><span id="wa-attempts">1</span> рет</strong> жіберілді.</p>
+      <div class="wa-info">Келесі дұрыс жауапта: <strong id="wa-next-pts">75%</strong> бал</div>
+      <div class="modal-actions">
+        <button class="btn btn-primary" onclick="closeModal('wa-modal')">Қайта жазу</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container" class="toast-container"></div>
+  <button class="mobile-panel-btn" onclick="togglePanel()">📋</button>
+
+  <!-- PYODIDE -->
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.27.0/full/pyodide.js"></script>
+  <script src="js/problems.js"></script>
+  <script src="js/compiler.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/teacher-auth.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/anticheat.js"></script>
+  <script src="js/contest.js"></script>
+  <script>
+    var DIFFICULTY_LABELS = { easy:'Жеңіл', medium:'Орташа', hard:'Қиын', expert:'Өте қиын' };
+    var DIFFICULTY_BADGE  = { easy:'badge-easy', medium:'badge-medium', hard:'badge-hard', expert:'badge-expert' };
+
+    // ── Theme ─────────────────────────────────────
+    (function(){
+      var t = localStorage.getItem('pycontest_theme') || 'dark';
+      if (t === 'light') document.documentElement.setAttribute('data-theme','light');
+      document.getElementById('theme-btn').textContent = t==='dark'?'🌙':'☀️';
+    })();
+    function toggleTheme(){
+      var t = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+      if (t === 'light') document.documentElement.setAttribute('data-theme','light');
+      else document.documentElement.removeAttribute('data-theme');
+      localStorage.setItem('pycontest_theme', t);
+      document.getElementById('theme-btn').textContent = t==='dark'?'🌙':'☀️';
+    }
+
+    // ── Panel toggle ─────────────────────────────
+    var panelOpen = true;
+    function togglePanel() {
+      var p = document.getElementById('problems-panel');
+      var btn = document.getElementById('panel-toggle');
+      panelOpen = !panelOpen;
+      p.classList.toggle('panel-collapsed', !panelOpen);
+      btn.textContent = panelOpen ? '◀' : '▶';
+    }
+
+    // ── Modal helpers ─────────────────────────────
+    function openModal(id)  { document.getElementById(id).classList.add('open'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+    function closeAnswerModal() {
+      closeModal('answer-modal');
+      document.getElementById('answer-banner').style.display = 'flex';
+    }
+
+    function clearCode() {
+      document.getElementById('code-area').value = '';
+      document.getElementById('run-output').style.display = 'none';
+    }
+
+    // Tab indent in editor
+    document.addEventListener('DOMContentLoaded', function() {
+      var ca = document.getElementById('code-area');
+      ca.addEventListener('keydown', function(e) {
+        if (e.key === 'Tab') {
+          e.preventDefault();
+          var s = this.selectionStart;
+          this.value = this.value.substring(0, s) + '    ' + this.value.substring(this.selectionEnd);
+          this.selectionStart = this.selectionEnd = s + 4;
+        }
+        if (e.key === 'Enter') {
+          var s = this.selectionStart;
+          var lastLine = this.value.substring(0, s).split('\n').pop();
+          var indent = lastLine.match(/^(\s*)/)[1];
+          if (lastLine.trimEnd().endsWith(':')) indent += '    ';
+          var el = this;
+          setTimeout(function() {
+            var p = el.selectionStart;
+            var v = el.value;
+            el.value = v.substring(0, p) + indent + v.substring(p);
+            el.selectionStart = el.selectionEnd = p + indent.length;
+          }, 0);
+        }
+      });
+      if (window.innerWidth < 768) {
+        document.addEventListener('click', function(e) {
+          if (e.target.closest('.problem-item') && panelOpen) togglePanel();
+        });
+      }
+    });
+  </script>
+</body>
+</html>

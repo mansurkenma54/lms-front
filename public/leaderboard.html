@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="kk">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>🏆 Рейтинг — PyGame.okmpu</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;600;700&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* ── Leaderboard Refinements ── */
+    .lb-hero { text-align: center; padding: 40px 20px 24px; }
+    .lb-hero h1 { font-size: 28px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 8px; }
+    .lb-hero p { color: var(--text3); font-size: 13px; max-width: 440px; margin: 0 auto; }
+
+    /* ── Compact Podium ── */
+    .lb-podium {
+      display: flex; align-items: flex-end; justify-content: center;
+      gap: 12px; margin: 24px 0 36px; padding: 0 10px;
+    }
+    .podium-card {
+      text-align: center; flex: 1; max-width: 180px;
+      border-radius: 18px; padding: 20px 14px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      transition: var(--transition);
+      box-shadow: var(--shadow-sm);
+      position: relative;
+    }
+    .podium-card:hover { transform: translateY(-4px); box-shadow: var(--shadow); border-color: var(--primary); }
+    .podium-1 { min-height: 220px; z-index: 2; border-color: rgba(139,111,212,0.3); background: linear-gradient(180deg, rgba(139,111,212,0.06), var(--card)); }
+    .podium-2 { min-height: 190px; }
+    .podium-3 { min-height: 170px; }
+    .podium-medal { font-size: 32px; margin-bottom: 6px; }
+    .podium-avatar {
+      width: 48px; height: 48px; border-radius: 50%;
+      margin: 8px auto 12px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; font-weight: 700; color: #FFF;
+      box-shadow: 0 4px 12px rgba(139,111,212,0.25);
+    }
+    .podium-name { font-weight: 700; font-size: 13px; margin-bottom: 4px; color: var(--text1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .podium-score { color: var(--primary); font-size: 15px; font-weight: 800; }
+    .podium-sub { color: var(--text3); font-size: 11px; margin-top: 2px; }
+
+    /* ── Table & Tabs ── */
+    .lb-tabs { display: flex; gap: 8px; justify-content: center; margin-bottom: 28px; flex-wrap: wrap; }
+    .lb-tab {
+      padding: 8px 16px; border-radius: 30px;
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text2); font-weight: 600; font-size: 13px;
+      cursor: pointer; transition: var(--transition);
+    }
+    .lb-tab.active { background: var(--primary); color: #fff; border-color: var(--primary); box-shadow: 0 3px 10px rgba(139,111,212,0.3); }
+    .lb-tab:hover:not(.active) { background: var(--btn-hover); color: var(--primary); }
+
+    .lb-row td { padding: 12px 14px; }
+    .lb-rank-cell { font-size: 18px; font-weight: 800; width: 50px; color: var(--text3); }
+    .lb-avatar {
+      width: 34px; height: 34px; border-radius: 10px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700; color: #FFF;
+      box-shadow: 0 2px 8px rgba(139,111,212,0.2);
+    }
+    .lb-name-cell { display: flex; align-items: center; gap: 12px; }
+    .lb-name-info div { font-weight: 700; font-size: 14px; color: var(--text1); }
+    .lb-name-info small { color: var(--text3); font-size: 11px; display: block; }
+
+    /* ── Profile Modal ── */
+    .profile-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(18, 18, 23, 0.8);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    .profile-modal {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 28px;
+      width: 95%;
+      max-width: 680px;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 0;
+      box-shadow: var(--shadow-lg);
+      animation: profileIn .4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes profileIn {
+      from { transform: scale(0.95) translateY(20px); opacity: 0; }
+      to { transform: scale(1) translateY(0); opacity: 1; }
+    }
+
+    .pm-header {
+      position: relative;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      padding: 40px 32px 30px;
+      color: white;
+    }
+
+    .pm-close {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: rgba(255, 255, 255, 0.2);
+      border: none;
+      color: white;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: var(--transition);
+    }
+
+    .pm-close:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: rotate(90deg);
+    }
+
+    .pm-avatar-big {
+      width: 84px;
+      height: 84px;
+      border-radius: 24px;
+      background: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      font-weight: 800;
+      color: var(--primary);
+      margin-bottom: 20px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    }
+
+    .pm-name {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 4px;
+    }
+
+    .pm-username {
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .pm-quote {
+      margin-top: 20px;
+      font-style: italic;
+      color: white;
+      font-size: 14px;
+      padding: 15px 20px;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 16px;
+      line-height: 1.6;
+    }
+
+    .pm-body {
+      padding: 32px;
+    }
+
+    .pm-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .pm-stat {
+      background: var(--surface);
+      border-radius: 18px;
+      padding: 20px 15px;
+      text-align: center;
+      transition: var(--transition);
+    }
+    
+    .pm-stat:hover {
+      transform: translateY(-2px);
+      background: #DCD7EB;
+    }
+    
+    [data-theme="dark"] .pm-stat:hover {
+      background: #35354D;
+    }
+
+    .pm-stat .val {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--primary-dark);
+      margin-bottom: 4px;
+    }
+
+    .pm-stat .lbl {
+      color: var(--text2);
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .pm-section-title {
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--text1);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .pm-section-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* Trophies */
+    .pm-trophies {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 32px;
+    }
+
+    .pm-trophy {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 10px 16px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .pm-trophy.gold { border-color: #fbbf24; background: rgba(251, 191, 36, 0.1); color: #d97706; }
+    .pm-trophy.silver { border-color: #94a3b8; background: rgba(148, 163, 184, 0.1); color: #475569; }
+    .pm-trophy.diamond { border-color: #A78BFA; background: rgba(167, 139, 250, 0.1); color: #7c3aed; }
+    .pm-trophy.empty { color: var(--text3); font-weight: 500; }
+  </style>
+</head>
+
+<body class="grid-bg">
+
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <div class="logo"><a href="index.html" style="color:inherit;text-decoration:none"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--primary);margin-right:4px;vertical-align:bottom;"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" x2="20" y1="19" y2="19"></line></svg> <span>PyGame.okmpu</span></a></div>
+    <div class="nav-links">
+      
+      <span id="nav-user" style="color:var(--text3);font-size:13px"></span>
+      <a href="index.html" class="btn-ghost">← Басты бет</a>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <div class="lb-hero">
+    <h1>🏆 <span style="color:var(--primary)">Рейтинг</span></h1>
+    <p>Оқушыны басыңыз — толық профиліне өтесіз</p>
+  </div>
+
+  <div class="section" style="max-width:860px;margin:0 auto">
+
+    <!-- TAB BUTTONS -->
+    <div class="lb-tabs">
+      <button class="lb-tab active" onclick="switchLB('score')">⭐ Студенттер</button>
+      <button class="lb-tab" onclick="switchLB('guests')">👥 Қонақтар</button>
+      <button class="lb-tab" onclick="switchLB('bits')">💎 Алмаз</button>
+      <button class="lb-tab" onclick="switchLB('speed')">⚡ Жылдамдық</button>
+    </div>
+
+    <!-- TOP 3 PODIUM -->
+    <div class="lb-podium" id="lb-podium"></div>
+
+    <!-- MAIN TABLE -->
+    <div style="overflow-x:auto">
+      <table class="data-table">
+        <thead id="lb-head"></thead>
+        <tbody id="lb-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── PROFILE MODAL ── -->
+  <div class="profile-modal-overlay" id="profile-overlay" style="display:none"
+    onclick="if(event.target===this)closeProfile()">
+    <div class="profile-modal" id="profile-modal">
+      <div class="pm-header">
+        <button class="pm-close" onclick="closeProfile()">✕</button>
+        <div class="pm-avatar-big" id="pm-avatar"></div>
+        <div class="pm-name" id="pm-name"></div>
+        <div class="pm-username" id="pm-username"></div>
+        <div class="pm-quote" id="pm-quote" style="display:none"></div>
+      </div>
+      <div class="pm-body">
+        <div class="pm-stats" id="pm-stats"></div>
+
+        <!-- Trophies -->
+        <div class="pm-section-title">🏅 Жетістіктер</div>
+        <div class="pm-trophies" id="pm-trophies"></div>
+
+        <!-- Problem history -->
+        <div class="pm-section-title">📋 Соңғы шешілген есептер</div>
+        <div class="pm-problems-list" id="pm-problems"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    // ─── Utilities ────────────────────────────────────────
+    function showToast(msg, type) {
+      var colors = { success: '#00ff88', error: '#ff3c3c', warn: '#ffc800', info: '#7c3aed' };
+      var t = document.createElement('div');
+      t.style.cssText = 'position:fixed;top:20px;right:20px;z-index:99999;background:' +
+        (colors[type] || colors.info) + ';color:#000;padding:12px 20px;border-radius:10px;' +
+        'font-weight:700;font-family:JetBrains Mono,monospace;max-width:340px;animation:slideIn .3s ease;box-shadow:0 4px 20px rgba(0,0,0,.4)';
+      t.textContent = msg;
+      document.body.appendChild(t);
+      setTimeout(function () { t.remove(); }, 3500);
+    }
+
+    function escH(s) {
+      return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function initials(name) {
+      var parts = String(name || '?').trim().split(' ');
+      return (parts[0][0] + (parts[1] ? parts[1][0] : '')).toUpperCase();
+    }
+
+    function fmtDate(d) {
+      if (!d) return '—';
+      return new Date(d).toLocaleString('kk-KZ', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    }
+
+    function fmtDuration(ms) {
+      if (!ms || ms <= 0) return '—';
+      var s = Math.round(ms / 1000);
+      if (s < 60) return s + ' сек';
+      var m = Math.floor(s / 60);
+      if (m < 60) return m + ' мин ' + (s % 60) + ' сек';
+      return Math.floor(m / 60) + ' сағ ' + (m % 60) + ' мин';
+    }
+
+    // ─── Leaderboard ──────────────────────────────────────
+    var currentTab = 'score';
+    var lbData = [];
+
+    function switchLB(tab) {
+      currentTab = tab;
+      document.querySelectorAll('.lb-tab').forEach(function (el) {
+        var txt = el.textContent.toLowerCase();
+        var isActive = false;
+        if (tab === 'score' && txt.includes('студенттер')) isActive = true;
+        if (tab === 'guests' && txt.includes('қонақтар')) isActive = true;
+        if (tab === 'bits' && txt.includes('алмаз')) isActive = true;
+        if (tab === 'speed' && txt.includes('жылдамдық')) isActive = true;
+        el.classList.toggle('active', isActive);
+      });
+      loadLB();
+    }
+
+    async function loadLB() {
+      var head = document.getElementById('lb-head');
+      var body = document.getElementById('lb-body');
+      var podium = document.getElementById('lb-podium');
+      body.innerHTML = '<tr><td colspan="6" style="text-align:center"><div class="loader-spinner" style="margin:20px auto"></div></td></tr>';
+      podium.innerHTML = '';
+
+      try {
+        if (currentTab === 'guests') {
+          head.innerHTML = '<tr><th>#</th><th>Қонақ аты</th><th>Ұпай</th><th>Соңғы белсенділік</th></tr>';
+          lbData = await API.guests.getLeaderboard();
+          renderPodium(lbData, function (s) { return s.score + ' ұпай'; });
+          body.innerHTML = '';
+          lbData.forEach(function (s, i) {
+            var medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1);
+            var init = initials(s.guest_name);
+            var tr = document.createElement('tr');
+            tr.className = 'lb-row';
+            tr.innerHTML =
+              '<td class="lb-rank-cell">' + medal + '</td>' +
+              '<td><div class="lb-name-cell">' +
+              '<div class="lb-avatar" style="background:linear-gradient(135deg, var(--primary), var(--primary-dark))">' + escH(init) + '</div>' +
+              '<div class="lb-name-info"><div>' + escH(s.guest_name) + '</div></div>' +
+              '</div></td>' +
+              '<td style="color:var(--primary);font-weight:700;font-size:16px">' + s.score + '</td>' +
+              '<td style="color:var(--text3);font-size:12px">' + fmtDate(s.updated_at) + '</td>';
+            body.appendChild(tr);
+          });
+        } else if (currentTab === 'score') {
+          head.innerHTML = '<tr><th>#</th><th>Оқушы</th><th>Жалпы балл</th><th>Есептер</th><th>💎 Алмаз</th><th>🏅</th><th>📊 Баға</th></tr>';
+          lbData = await API.leaderboard.score();
+
+          var maxS = 1, minS = 0;
+          if (lbData && lbData.length > 0) {
+            var scores = lbData.map(function (s) { return s.total_score || 0; });
+            maxS = Math.max.apply(null, scores);
+            minS = Math.min.apply(null, scores);
+            if (maxS === minS) maxS = minS + 1; // Prevent division by zero
+          }
+
+          renderPodium(lbData, function (s) { return s.total_score + ' бал'; });
+          body.innerHTML = '';
+          lbData.forEach(function (s, i) {
+            var medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1);
+            var solved = s.problems_solved || s.solved_count || 0;
+            var bits = s.bits_balance || 0;
+            var trophyStr = buildTrophyMini(s);
+            var init = initials(s.student_name || s.display_name || '?');
+            var tr = document.createElement('tr');
+            tr.className = 'lb-row';
+
+            var raw = s.total_score || 0;
+            var relGrade = 60 + ((raw - minS) / (maxS - minS)) * 36;
+            var finalGrade = Math.round(relGrade);
+            var gradeCol = finalGrade >= 90 ? '#00ff88' : (finalGrade >= 75 ? '#ffc800' : '#ff3c3c');
+
+            tr.innerHTML =
+              '<td class="lb-rank-cell">' + medal + '</td>' +
+              '<td><div class="lb-name-cell">' +
+              '<div class="lb-avatar">' + escH(init) + '</div>' +
+              '<div class="lb-name-info"><div>' + escH(s.student_name || s.display_name) + '</div>' +
+              '<small>@' + escH(s.username || '') + '</small></div>' +
+              '</div></td>' +
+              '<td style="color:var(--primary);font-weight:700;font-size:16px">' + s.total_score + '</td>' +
+              '<td>' + solved + '</td>' +
+              '<td><span class="bits-badge">💎 ' + bits + '</span></td>' +
+              '<td>' + trophyStr + '</td>' +
+              '<td style="font-weight:bold;color:' + gradeCol + ';">' + finalGrade + '%</td>';
+            tr.onclick = function () { openProfile(s.student_id || s.id, s); };
+            body.appendChild(tr);
+          });
+
+        } else if (currentTab === 'bits') {
+          head.innerHTML = '<tr><th>#</th><th>Оқушы</th><th>💎 Алмаз</th><th>Балл</th><th>🏅</th></tr>';
+          lbData = await API.leaderboard.bits();
+          renderPodium(lbData, function (s) { return '💎 ' + s.bits_balance; });
+          body.innerHTML = '';
+          lbData.forEach(function (s, i) {
+            var medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1);
+            var init = initials(s.display_name || '?');
+            var trophyStr = buildTrophyMini(s);
+            var tr = document.createElement('tr');
+            tr.className = 'lb-row';
+            tr.innerHTML =
+              '<td class="lb-rank-cell">' + medal + '</td>' +
+              '<td><div class="lb-name-cell">' +
+              '<div class="lb-avatar">' + escH(init) + '</div>' +
+              '<div class="lb-name-info"><div>' + escH(s.display_name) + '</div>' +
+              '<small>@' + escH(s.username || '') + '</small></div>' +
+              '</div></td>' +
+              '<td><span class="bits-badge" style="font-size:15px">💎 ' + s.bits_balance + '</span></td>' +
+              '<td style="color:var(--text2)">' + (s.total_score || 0) + '</td>' +
+              '<td>' + trophyStr + '</td>';
+            tr.onclick = function () { openProfile(s.id, s); };
+            body.appendChild(tr);
+          });
+
+        } else {
+          head.innerHTML = '<tr><th>#</th><th>Оқушы</th><th>Шешілген</th><th>Орт. уақыт</th><th>Соңғы шешу</th></tr>';
+          lbData = await API.leaderboard.speed();
+          renderPodium(lbData, function (s) { return (s.solved || 0) + ' есеп'; });
+          body.innerHTML = '';
+          lbData.forEach(function (s, i) {
+            var medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1);
+            var init = initials(s.student_name || s.display_name || '?');
+            var avgMs = s.avg_time_ms || 0;
+            var tr = document.createElement('tr');
+            tr.className = 'lb-row';
+            tr.innerHTML =
+              '<td class="lb-rank-cell">' + medal + '</td>' +
+              '<td><div class="lb-name-cell">' +
+              '<div class="lb-avatar">' + escH(init) + '</div>' +
+              '<span>' + escH(s.student_name || s.display_name) + '</span>' +
+              '</div></td>' +
+              '<td style="color:var(--primary);font-weight:700">' + (s.solved || 0) + '</td>' +
+              '<td style="color:var(--text2)">' + fmtDuration(avgMs) + '</td>' +
+              '<td style="color:var(--text3);font-size:11px">' + fmtDate(s.last_solve) + '</td>';
+            tr.onclick = function () { openProfile(s.student_id || s.id, s); };
+            body.appendChild(tr);
+          });
+        }
+
+        if ((lbData || []).length === 0) {
+          body.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:32px">Деректер жоқ</td></tr>';
+          podium.innerHTML = '';
+        }
+
+      } catch (e) {
+        body.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--danger);padding:20px">' + escH(e.message) + '</td></tr>';
+        podium.innerHTML = '';
+      }
+    }
+
+    function renderPodium(data, labelFn) {
+      var podium = document.getElementById('lb-podium');
+      podium.innerHTML = '';
+      var top3 = data.slice(0, 3);
+      if (top3.length === 0) return;
+      
+      // Order for visual display: 2nd, 1st, 3rd
+      var displayOrder = [];
+      if (top3.length === 1) displayOrder = [top3[0]];
+      else if (top3.length === 2) displayOrder = [top3[1], top3[0]];
+      else displayOrder = [top3[1], top3[0], top3[2]];
+
+      displayOrder.forEach(function (s) {
+        if (!s) return;
+        var isFirst = s === top3[0];
+        var isSecond = s === top3[1];
+        var isThird = s === top3[2];
+        
+        var medal = isFirst ? '🥇' : isSecond ? '🥈' : '🥉';
+        var cls = isFirst ? 'podium-1' : isSecond ? 'podium-2' : 'podium-3';
+        var name = s.guest_name || s.student_name || s.display_name || '?';
+        var init = initials(name);
+        
+        var div = document.createElement('div');
+        div.className = 'podium-card ' + cls;
+        div.innerHTML =
+          '<div class="podium-medal">' + medal + '</div>' +
+          '<div class="podium-avatar">' + escH(init) + '</div>' +
+          '<div class="podium-name">' + escH(name) + '</div>' +
+          '<div class="podium-score">' + labelFn(s) + '</div>' +
+          '<div class="podium-sub">' + (s.problems_solved || s.solved || s.score || 0) + (s.guest_name ? ' ұпай' : ' есеп') + '</div>';
+        
+        var sid = s.student_id || s.id;
+        if (!s.guest_name) {
+          div.onclick = function () { openProfile(sid, s); };
+        } else {
+          div.style.cursor = 'default';
+        }
+        podium.appendChild(div);
+      });
+    }
+
+    function buildTrophyMini(s) {
+      var t = '';
+      if (s.trophy_diamond > 0) t += '<span title="💎 Алмаз кубогы">💎</span> ';
+      if (s.trophy_gold > 0) t += '<span title="🥇 Алтын кубогы">🥇</span> ';
+      if (s.trophy_silver > 0) t += '<span title="🥈 Күміс кубогы">🥈</span> ';
+      return t || '<span style="color:var(--text3)">—</span>';
+    }
+
+    // ─── Profile Modal ────────────────────────────────────
+    var currentProfileId = null;
+
+    async function openProfile(studentId, basicData) {
+      currentProfileId = studentId;
+      document.getElementById('profile-overlay').style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+
+      // Fill with basic data immediately
+      var name = basicData.student_name || basicData.display_name || '?';
+      var username = basicData.username || '';
+      document.getElementById('pm-avatar').textContent = initials(name);
+      document.getElementById('pm-name').textContent = name;
+      document.getElementById('pm-username').textContent = username ? '@' + username : '';
+      document.getElementById('pm-quote').style.display = 'none';
+      document.getElementById('pm-stats').innerHTML = '<div class="pm-stat"><div class="val"><div class="loader-spinner" style="width:24px;height:24px;margin:auto"></div></div><div class="lbl">Жүктелуде...</div></div>';
+      document.getElementById('pm-trophies').innerHTML = '';
+      document.getElementById('pm-problems').innerHTML = '<div class="pm-empty">⏳ Жүктелуде...</div>';
+
+      try {
+        // Try to load full profile from API
+        var userData = await loadStudentProfile(studentId);
+        renderProfileModal(userData, basicData);
+      } catch (e) {
+        // Fallback to basic leaderboard data
+        renderProfileModalBasic(basicData);
+      }
+    }
+
+    async function loadStudentProfile(id) {
+      // Try to get from admin users endpoint (teacher/admin only) or leaderboard
+      try {
+        var users = await API.admin.getUsers();
+        var user = users.find(function (u) { return u.id == id; });
+        if (!user) throw new Error('Not found');
+        // Also try to get their submissions
+        var subs = [];
+        try { subs = await API.submissions.get({ studentId: id }); } catch (e) { }
+        user.submissions = subs;
+        return user;
+      } catch (e) {
+        // non-admin: get from leaderboard data stored
+        var found = lbData.find(function (s) { return (s.student_id || s.id) == id; });
+        if (found) return found;
+        throw e;
+      }
+    }
+
+    function renderProfileModal(user, fallback) {
+      var name = user.display_name || fallback.student_name || '?';
+      var username = user.username || fallback.username || '';
+      var score = user.total_score || fallback.total_score || 0;
+      var bits = user.bits_balance || fallback.bits_balance || 0;
+      var solved = user.problems_solved || fallback.problems_solved || fallback.solved || 0;
+      var warnings = user.warnings_count || 0;
+      var subs = user.submissions || [];
+
+      document.getElementById('pm-avatar').textContent = initials(name);
+      document.getElementById('pm-name').textContent = name;
+      document.getElementById('pm-username').textContent = username ? '@' + username : '';
+
+      // Quote
+      if (user.quote || user.bio) {
+        var q = document.getElementById('pm-quote');
+        q.textContent = '"' + (user.quote || user.bio) + '"';
+        q.style.display = 'block';
+      }
+
+      // Stats
+      document.getElementById('pm-stats').innerHTML =
+        statCard(score, '⭐ Балл') +
+        statCard(solved, '✅ Есептер') +
+        statCard('💎 ' + bits, 'Алмаз') +
+        statCard(warnings > 0 ? '⚠️ ' + warnings : '0', 'Ескертулер') +
+        statCard(user.courses_count || fallback.courses_count || 0, '📚 Курс') +
+        statCard(user.banned ? '🚫 Бан' : '✅ Белсенді', 'Статус');
+
+      // Trophies
+      renderTrophies(user);
+
+      // Submissions table
+      renderSubmissions(subs, solved, fallback);
+    }
+
+    function renderProfileModalBasic(s) {
+      document.getElementById('pm-stats').innerHTML =
+        statCard(s.total_score || 0, '⭐ Балл') +
+        statCard(s.problems_solved || s.solved || 0, '✅ Есептер') +
+        statCard('💎 ' + (s.bits_balance || 0), 'Алмаз') +
+        statCard(s.courses_count || 0, '📚 Курс') +
+        statCard('—', 'Ескертулер') +
+        statCard(s.avg_time_ms ? fmtDuration(s.avg_time_ms) : '—', 'Орт. уақыт');
+      renderTrophies(s);
+      document.getElementById('pm-problems').innerHTML = '<div class="pm-empty">Толық ақпарат үшін жүйеге кіріңіз</div>';
+    }
+
+    function statCard(val, lbl) {
+      return '<div class="pm-stat"><div class="val">' + escH(String(val)) + '</div><div class="lbl">' + escH(lbl) + '</div></div>';
+    }
+
+    function renderTrophies(s) {
+      var gold = parseInt(s.trophy_gold || 0);
+      var silver = parseInt(s.trophy_silver || 0);
+      var diamond = parseInt(s.trophy_diamond || 0);
+      var html = '';
+      if (diamond > 0) html += '<div class="pm-trophy diamond">💎 Алмаз × ' + diamond + '</div>';
+      if (gold > 0) html += '<div class="pm-trophy gold">🥇 Алтын × ' + gold + '</div>';
+      if (silver > 0) html += '<div class="pm-trophy silver">🥈 Күміс × ' + silver + '</div>';
+      if (!html) html = '<div class="pm-trophy empty">Кубоктар жоқ</div>';
+      document.getElementById('pm-trophies').innerHTML = html;
+    }
+
+    function renderSubmissions(subs, solved, fallback) {
+      var container = document.getElementById('pm-problems');
+      if (!subs || subs.length === 0) {
+        container.innerHTML = '<div class="pm-empty">Жіберілген есептер жоқ</div>';
+        return;
+      }
+
+      // Sort newest first, show last 10
+      var recent = subs.slice().sort(function (a, b) { return new Date(b.created_at) - new Date(a.created_at); }).slice(0, 10);
+      var html = '';
+      recent.forEach(function (sub) {
+        var title = sub.problem_title || sub.assignment_title || (sub.acmp_problem_id ? 'ACMP #' + sub.acmp_problem_id : 'Есеп');
+        var score = sub.score || 0;
+        var cls = score === 100 ? 'pass100' : score >= 50 ? 'partial' : '';
+        var timeMs = sub.time_taken_ms || sub.execution_time_ms || 0;
+        html +=
+          '<div class="pm-problem-row ' + cls + '">' +
+          '<div style="flex:1">' +
+          '<div class="prob-name">' + escH(title) + '</div>' +
+          '<div class="prob-time">📅 ' + fmtDate(sub.created_at) +
+          (timeMs ? ' &nbsp;·&nbsp; ⏱ ' + fmtDuration(timeMs) : '') + '</div>' +
+          '</div>' +
+          '<div style="text-align:right">' +
+          '<div class="prob-score">' + score + '%</div>' +
+          '<div style="font-size:12px;margin-top:2px">' + (score === 100 ? '✅ Сәтті' : '❌ Қате') + '</div>' +
+          '</div>' +
+          '</div>';
+      });
+      container.innerHTML = html;
+    }
+
+    function closeProfile() {
+      document.getElementById('profile-overlay').style.display = 'none';
+      document.body.style.overflow = '';
+      currentProfileId = null;
+    }
+
+    // Close on Escape
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') closeProfile();
+    });
+
+    // ─── Check current user ───────────────────────────────
+    (function () {
+      try {
+        var user = Auth ? Auth.getCurrentUser() : null;
+        if (user) {
+          document.getElementById('nav-user').textContent = '👤 ' + user.display_name;
+        }
+      } catch (e) { }
+    })();
+
+    // ─── Init ─────────────────────────────────────────────
+    loadLB();
+  </script>
+</body>
+
+</html>
